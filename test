@@ -1,6 +1,4 @@
 #!/bin/bash
-export NAME=hello
-export DNS_DOMAIN=reay.email
 export STACK_NAME=$NAME-`echo $DNS_DOMAIN | sed -e 's/\./\-/g'`
 export IPADDRESS=`curl -s http://whatismijnip.nl | cut -d " " -f 5`
 
