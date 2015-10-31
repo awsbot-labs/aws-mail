@@ -1,0 +1,25 @@
+#!/bin/bash
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 create|update|delete <SSHKEY> <NAME> <DOMAIN_NAME>"
+  echo "e.g. $0 create|update|delete mail john doe.email"
+  exit 1
+else
+  if [ "$1" != "delete" ]; then
+    # Sets your external IP for the SSHLocation
+    #IPADDRESS=`wget -qO- http://ipecho.net/plain ; echo -n`
+    IPADDRESS=`curl -s http://whatismijnip.nl | cut -d " " -f 5`
+
+    # Creates a CloudFormation stack for the s3 bucket website
+    aws cloudformation $1-stack \
+      --stack-name $AWS_DEFAULT_PROFILE \
+      --template-body file://cloudformation.json \
+      --capabilities CAPABILITY_IAM \
+      --parameters \
+ParameterKey=SSHLocation,ParameterValue=$IPADDRESS \
+ParameterKey=KeyName,ParameterValue=$2 \
+ParameterKey=Name,ParameterValue=$3 \
+ParameterKey=DomainName,ParameterValue=$4
+  else
+    aws cloudformtation delete-stack --stack-name $AWS_DEFAULT_PROFILE
+  fi
+fi

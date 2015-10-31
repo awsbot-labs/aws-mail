@@ -1,0 +1,477 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Creates a mail server running Ubuntu + Postfix + Courier IMAP + MySQL + Amavisd-new + SpamAssassin + ClamAV + SASL + TLS + Roundcube + Postgrey based on the tutorial by Ivar at http://flurdy.com/docs/postfix/.",
+    "Parameters": {
+        "Name": {
+            "Description": "EMail Name, e.g. john. Leave out the @domain.tld, as this will be created automatically.",
+            "Type": "String"
+        },
+        "DNSDomain": {
+            "Description": "DNS Name for the email address, e.g. domain.tld",
+            "Type": "String"
+        },
+        "KeyName": {
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+            "Default": "default",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "64",
+            "AllowedPattern": "[-_ a-zA-Z0-9]*",
+            "ConstraintDescription": "can contain only alphanumeric characters, spaces, dashes and underscores."
+        },
+        "ImageId": {
+            "Type": "String",
+            "Default": "ami-4d459a3e"
+        },
+        "InstanceType": {
+            "Description": "EC2 instance type",
+            "Type": "String",
+            "Default": "t2.micro",
+            "AllowedValues": [
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "m1.large",
+                "m1.xlarge",
+                "m2.xlarge",
+                "m2.2xlarge",
+                "m2.4xlarge",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "c1.medium",
+                "c1.xlarge",
+                "cc1.4xlarge",
+                "cc2.8xlarge",
+                "cg1.4xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge"
+            ],
+            "ConstraintDescription": "must be a valid EC2 instance type."
+        },
+        "SSHLocation": {
+            "Description": " The IP address range that can be used to SSH to the EC2 instances",
+            "Default": "0.0.0.0/0",
+            "Type": "String",
+            "MinLength": "9",
+            "MaxLength": "18",
+            "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+            "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+        }
+    },
+    "Resources": {
+        "S3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "AccessControl": "Private"
+            }
+        },
+        "S3BucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+                "PolicyDocument": {
+                    "Id": "S3BucketPolicy",
+                    "Statement": [
+                        {
+                            "Sid": "ReadAccess",
+                            "Action": [
+                                "s3:GetObject",
+                                "s3:PutObject"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "arn:aws:s3:::",
+                                        {
+                                            "Ref": "S3Bucket"
+                                        },
+                                        "/*"
+                                    ]
+                                ]
+                            },
+                            "Principal": {
+                                "AWS": "*"
+                            }
+                        }
+                    ]
+                },
+                "Bucket": {
+                    "Ref": "S3Bucket"
+                }
+            }
+        },
+        "IAMRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ec2.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/"
+            }
+        },
+        "IAMInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "DependsOn": "IAMRole",
+            "Properties": {
+                "Roles": [
+                    {
+                        "Ref": "IAMRole"
+                    }
+                ]
+            }
+        },
+        "RolePolicies": {
+            "Type": "AWS::IAM::Policy",
+            "DependsOn": "IAMRole",
+            "Properties": {
+                "PolicyName": "InstancePolicy",
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "s3:ListBucket",
+                                "s3:GetBucketLocation"
+                            ],
+                            "Resource": [
+                                {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:s3:::",
+                                            {
+                                                "Ref": "S3Bucket"
+                                            }
+                                        ]
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "IAMRole"
+                    }
+                ]
+            }
+        },
+        "HostedZone": {
+            "Type": "AWS::Route53::HostedZone",
+            "Properties": {
+                "Name": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "DNSDomain"
+                            },
+                            "."
+                        ]
+                    ]
+                },
+                "HostedZoneConfig": {
+                    "Comment": "HostedZone created by CloudFormation"
+                }
+            }
+        },
+        "SPFRecordSetGroup": {
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneId": {
+                    "Ref": "HostedZone"
+                },
+                "RecordSets": [
+                    {
+                        "Name": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "DNSDomain"
+                                    },
+                                    "."
+                                ]
+                            ]
+                        },
+                        "Type": "TXT",
+                        "ResourceRecords": [
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "\"v=spf1 mx a ip4:",
+                                        {
+                                            "Fn::GetAtt": [
+                                                "EC2Instance",
+                                                "PublicIp"
+                                            ]
+                                        },
+                                        "/32 -all\""
+                                    ]
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "MXRecordSetGroup": {
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneId": {
+                    "Ref": "HostedZone"
+                },
+                "RecordSets": [
+                    {
+                        "Name": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "\\052.",
+                                    {
+                                        "Ref": "DNSDomain"
+                                    },
+                                    "."
+                                ]
+                            ]
+                        },
+                        "Type": "MX",
+                        "ResourceRecords": [
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "10 mail."
+                                        {
+                                            "Ref": "DNSDomain"
+                                        },
+                                        "."
+                                    ]
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "ARecordSetGroup": {
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneId": {
+                    "Ref": "HostedZone"
+                },
+                "RecordSets": [
+                    {
+                        "Name":  {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "\\052.",
+                                    {
+                                        "Ref": "DNSDomain"
+                                    },
+                                    "."
+                                ]
+                            ]
+                        },
+                        "Type": "A",
+                        "ResourceRecords": [
+                            {
+                                "Fn::GetAtt": [
+                                    "EC2Instance",
+                                    "PublicIp"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "DmarcRecordSetGroup": {
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneId": {
+                    "Ref": "HostedZone"
+                },
+                "RecordSets": [
+                    {
+                        "Name": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "_dmarc.",
+                                    {
+                                        "Ref": "DNSDomain"
+                                    },
+                                    "."
+                                ]
+                            ]
+                        },
+                        "Type": "TXT",
+                        "ResourceRecords": [
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "\"v=DMARC1; p=reject; sp=reject; rua=mailto:",
+                                        {
+                                            "Ref": "Name"
+                                        },
+                                        "@",
+                                        {
+                                            "Ref": "DNSDomain"
+                                        },
+                                        "; ruf=mailto:",
+                                        {
+                                            "Ref": "Name"
+                                        },
+                                        "@",
+                                        {
+                                            "Ref": "DNSDomain"
+                                        },
+                                        "; rf=afrf; pct=100; ri=86400\""
+                                    ]
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "SecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Allow SMTP, IMAP, HTTP and POP",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": {
+                            "Ref": "SSHLocation"
+                        }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                      "IpProtocol": "tcp",
+                      "FromPort": "995",
+                      "ToPort": "995",
+                      "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                      "IpProtocol": "tcp",
+                      "FromPort": "993",
+                      "ToPort": "993",
+                      "CidrIp": "0.0.0.0/0"
+                    },
+
+                    {
+                      "IpProtocol": "tcp",
+                      "FromPort": "25",
+                      "ToPort": "25",
+                      "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                      "IpProtocol": "tcp",
+                      "FromPort": "143",
+                      "ToPort": "143",
+                      "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                      "IpProtocol": "tcp",
+                      "FromPort": "465",
+                      "ToPort": "465",
+                      "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                      "IpProtocol": "tcp",
+                      "FromPort": "443",
+                      "ToPort": "443",
+                      "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        "EIP": {
+            "Type": "AWS::EC2::EIP"
+        },
+        "EC2Instance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "DisableApiTermination": "false",
+                "InstanceInitiatedShutdownBehavior": "stop",
+                "IAMInstanceProfile": {
+                    "Ref": "IAMInstanceProfile"
+                },
+                "ImageId": {
+                    "Ref": "ImageId"
+                },
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "Monitoring": "false",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value":  {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                      "Ref": "Name"
+                                    },
+                                    ".",
+                                    {
+                                        "Ref": "DNSDomain"
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "EIPAssociation": {
+            "Type": "AWS::EC2::EIPAssociation",
+            "Properties": {
+                "AllocationId": {
+                    "Fn::GetAtt": [
+                        "EIP",
+                        "AllocationId"
+                    ]
+                },
+                "InstanceId": {
+                    "Ref": "EC2Instance"
+                }
+            }
+        }
+    },
+    "Outputs": {}
+}

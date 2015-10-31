@@ -1,0 +1,52 @@
+#!/bin/bash
+export NAME=hello
+export DNS_DOMAIN=reay.email
+export STACK_NAME=$NAME-`echo $DNS_DOMAIN | sed -e 's/\./\-/g'`
+export IPADDRESS=`curl -s http://whatismijnip.nl | cut -d " " -f 5`
+
+function abort()
+{
+  echo " *** ERROR $@"
+  exit 1
+}
+
+function cleanup()
+{
+  echo " --> Cleaning up"
+
+  echo " --> Deleting CloudFormation stack"
+  aws cloudformation delete-stack --stack-name $STACK_NAME > /dev/null 2>&1
+  echo "Finished at $(date -u +%Y-%m-%dT%H:%M:%S%z)"
+}
+
+echo "Started at $(date -u +%Y-%m-%dT%H:%M:%S%z)"
+trap cleanup EXIT
+
+echo " --> Creating Cloudformation stack"
+    aws cloudformation $1-stack \
+      --stack-name $STACK_NAME \
+      --template-body file://cloudformation.json \
+      --capabilities CAPABILITY_IAM \
+      --parameters \
+ParameterKey=SSHLocation,ParameterValue=$IPADDRESS \
+ParameterKey=KeyName,ParameterValue=default \
+ParameterKey=Name,ParameterValue=$NAME \
+ParameterKey=DomainName,ParameterValue=$DNS_DOMAIN
+ > /dev/null 2>&1
+
+echo " --> Watching stack progress, please wait..."
+STACK_STATUS=CREATE_IN_PROGRESS
+while [ "$STACK_STATUS" == "CREATE_IN_PROGRESS" ]; do
+  STACK_STATUS=`aws cloudformation describe-stacks --stack-name $STACK_NAME --query Stacks[*].StackStatus --output text`
+  if [[ ( "$STACK_STATUS" == "CREATE_COMPLETE" ) || ( "$STACK_STATUS" == "DELETE_COMPLETE" ) || ( "$STACK_STATUS" == "DELETE_FAILED" ) ]]; then
+    break
+  fi
+  sleep 3
+done
+
+MSG="Checking Website"
+echo " --> $MSG"
+curl -s -k -L https://$NAME.$DNS_DOMAIN | grep "Roundcube Webmail" > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  abort $MSG
+fi
