@@ -2,6 +2,42 @@
     "AWSTemplateFormatVersion": "2010-09-09",
     "Description": "Creates a mail server running Ubuntu + Postfix + Courier IMAP + MySQL + Amavisd-new + SpamAssassin + ClamAV + SASL + TLS + Roundcube + Postgrey based on the tutorial by Ivar at http://flurdy.com/docs/postfix/.",
     "Parameters": {
+        "DBName": {
+            "Default": "maildb",
+            "Description": "MySQL database name",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "64",
+            "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+            "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
+        },
+        "DBUser": {
+            "NoEcho": "true",
+            "Description": "Username for MySQL database access",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "16",
+            "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+            "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
+        },
+        "DBPassword": {
+            "NoEcho": "true",
+            "Description": "Password for MySQL database access",
+            "Type": "String",
+            "MinLength": "8",
+            "MaxLength": "41",
+            "AllowedPattern": "[a-zA-Z0-9]*",
+            "ConstraintDescription": "must contain only alphanumeric characters."
+        },
+        "DBRootPassword": {
+            "NoEcho": "true",
+            "Description": "Root password for MySQL",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "41",
+            "AllowedPattern": "[a-zA-Z0-9]*",
+            "ConstraintDescription": "must contain only alphanumeric characters."
+        },
         "Name": {
             "Description": "EMail Name, e.g. john. Leave out the @domain.tld, as this will be created automatically.",
             "Type": "String"
@@ -60,6 +96,197 @@
             "MaxLength": "18",
             "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
             "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+        }
+    },
+    "Mappings": {
+        "AWSInstanceType2Arch": {
+            "t1.micro": {
+                "Arch": "PV64"
+            },
+            "t2.micro": {
+                "Arch": "HVM64"
+            },
+            "t2.small": {
+                "Arch": "HVM64"
+            },
+            "t2.medium": {
+                "Arch": "HVM64"
+            },
+            "m1.small": {
+                "Arch": "PV64"
+            },
+            "m1.medium": {
+                "Arch": "PV64"
+            },
+            "m1.large": {
+                "Arch": "PV64"
+            },
+            "m1.xlarge": {
+                "Arch": "PV64"
+            },
+            "m2.xlarge": {
+                "Arch": "PV64"
+            },
+            "m2.2xlarge": {
+                "Arch": "PV64"
+            },
+            "m2.4xlarge": {
+                "Arch": "PV64"
+            },
+            "m3.medium": {
+                "Arch": "HVM64"
+            },
+            "m3.large": {
+                "Arch": "HVM64"
+            },
+            "m3.xlarge": {
+                "Arch": "HVM64"
+            },
+            "m3.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "c1.medium": {
+                "Arch": "PV64"
+            },
+            "c1.xlarge": {
+                "Arch": "PV64"
+            },
+            "c3.large": {
+                "Arch": "HVM64"
+            },
+            "c3.xlarge": {
+                "Arch": "HVM64"
+            },
+            "c3.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "c3.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "c3.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "c4.large": {
+                "Arch": "HVM64"
+            },
+            "c4.xlarge": {
+                "Arch": "HVM64"
+            },
+            "c4.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "c4.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "c4.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "g2.2xlarge": {
+                "Arch": "HVMG2"
+            },
+            "r3.large": {
+                "Arch": "HVM64"
+            },
+            "r3.xlarge": {
+                "Arch": "HVM64"
+            },
+            "r3.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "r3.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "r3.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "i2.xlarge": {
+                "Arch": "HVM64"
+            },
+            "i2.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "i2.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "i2.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "d2.xlarge": {
+                "Arch": "HVM64"
+            },
+            "d2.2xlarge": {
+                "Arch": "HVM64"
+            },
+            "d2.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "d2.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "hi1.4xlarge": {
+                "Arch": "HVM64"
+            },
+            "hs1.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "cr1.8xlarge": {
+                "Arch": "HVM64"
+            },
+            "cc2.8xlarge": {
+                "Arch": "HVM64"
+            }
+        },
+        "AWSRegionArch2AMI": {
+            "us-east-1": {
+                "PV64": "ami-0f4cfd64",
+                "HVM64": "ami-0d4cfd66",
+                "HVMG2": "ami-5b05ba30"
+            },
+            "us-west-2": {
+                "PV64": "ami-d3c5d1e3",
+                "HVM64": "ami-d5c5d1e5",
+                "HVMG2": "ami-a9d6c099"
+            },
+            "us-west-1": {
+                "PV64": "ami-85ea13c1",
+                "HVM64": "ami-87ea13c3",
+                "HVMG2": "ami-37827a73"
+            },
+            "eu-west-1": {
+                "PV64": "ami-d6d18ea1",
+                "HVM64": "ami-e4d18e93",
+                "HVMG2": "ami-72a9f105"
+            },
+            "eu-central-1": {
+                "PV64": "ami-a4b0b7b9",
+                "HVM64": "ami-a6b0b7bb",
+                "HVMG2": "ami-a6c9cfbb"
+            },
+            "ap-northeast-1": {
+                "PV64": "ami-1a1b9f1a",
+                "HVM64": "ami-1c1b9f1c",
+                "HVMG2": "ami-f644c4f6"
+            },
+            "ap-southeast-1": {
+                "PV64": "ami-d24b4280",
+                "HVM64": "ami-d44b4286",
+                "HVMG2": "ami-12b5bc40"
+            },
+            "ap-southeast-2": {
+                "PV64": "ami-ef7b39d5",
+                "HVM64": "ami-db7b39e1",
+                "HVMG2": "ami-b3337e89"
+            },
+            "sa-east-1": {
+                "PV64": "ami-5b098146",
+                "HVM64": "ami-55098148",
+                "HVMG2": "NOT_SUPPORTED"
+            },
+            "cn-north-1": {
+                "PV64": "ami-bec45887",
+                "HVM64": "ami-bcc45885",
+                "HVMG2": "NOT_SUPPORTED"
+            }
         }
     },
     "Resources": {
@@ -174,10 +401,10 @@
                 ]
             }
         },
-        "HostedZone": {
-            "Type": "AWS::Route53::HostedZone",
+        "SPFRecordSetGroup": {
+            "Type": "AWS::Route53::RecordSetGroup",
             "Properties": {
-                "Name": {
+                "HostedZoneName": {
                     "Fn::Join": [
                         "",
                         [
@@ -187,17 +414,6 @@
                             "."
                         ]
                     ]
-                },
-                "HostedZoneConfig": {
-                    "Comment": "HostedZone created by CloudFormation"
-                }
-            }
-        },
-        "SPFRecordSetGroup": {
-            "Type": "AWS::Route53::RecordSetGroup",
-            "Properties": {
-                "HostedZoneId": {
-                    "Ref": "HostedZone"
                 },
                 "RecordSets": [
                     {
@@ -213,6 +429,7 @@
                             ]
                         },
                         "Type": "TXT",
+                        "TTL": "300",
                         "ResourceRecords": [
                             {
                                 "Fn::Join": [
@@ -220,10 +437,7 @@
                                     [
                                         "\"v=spf1 mx a ip4:",
                                         {
-                                            "Fn::GetAtt": [
-                                                "EC2Instance",
-                                                "PublicIp"
-                                            ]
+                                            "Ref": "EIP"
                                         },
                                         "/32 -all\""
                                     ]
@@ -237,8 +451,16 @@
         "MXRecordSetGroup": {
             "Type": "AWS::Route53::RecordSetGroup",
             "Properties": {
-                "HostedZoneId": {
-                    "Ref": "HostedZone"
+                "HostedZoneName": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "DNSDomain"
+                            },
+                            "."
+                        ]
+                    ]
                 },
                 "RecordSets": [
                     {
@@ -246,7 +468,7 @@
                             "Fn::Join": [
                                 "",
                                 [
-                                    "\\052.",
+                                    "mx.",
                                     {
                                         "Ref": "DNSDomain"
                                     },
@@ -255,12 +477,14 @@
                             ]
                         },
                         "Type": "MX",
+                        "TTL": "300",
                         "ResourceRecords": [
                             {
                                 "Fn::Join": [
                                     "",
                                     [
-                                        "10 mail."
+                                        "10 ",
+                                        "mail.",
                                         {
                                             "Ref": "DNSDomain"
                                         },
@@ -276,12 +500,100 @@
         "ARecordSetGroup": {
             "Type": "AWS::Route53::RecordSetGroup",
             "Properties": {
-                "HostedZoneId": {
-                    "Ref": "HostedZone"
+                "HostedZoneName": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "DNSDomain"
+                            },
+                            "."
+                        ]
+                    ]
                 },
                 "RecordSets": [
                     {
-                        "Name":  {
+                        "Name": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "Name"
+                                    },
+                                    ".",
+                                    {
+                                        "Ref": "DNSDomain"
+                                    },
+                                    "."
+                                ]
+                            ]
+                        },
+                        "Type": "A",
+                        "TTL": "300",
+                        "ResourceRecords": [
+                            {
+                                "Ref": "EIP"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "ARootRecordSetGroup": {
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneName": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "DNSDomain"
+                            },
+                            "."
+                        ]
+                    ]
+                },
+                "RecordSets": [
+                    {
+                        "Name": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "DNSDomain"
+                                    },
+                                    "."
+                                ]
+                            ]
+                        },
+                        "Type": "A",
+                        "TTL": "300",
+                        "ResourceRecords": [
+                            {
+                                "Ref": "EIP"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "AWildcardRecordSetGroup": {
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneName": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "DNSDomain"
+                            },
+                            "."
+                        ]
+                    ]
+                },
+                "RecordSets": [
+                    {
+                        "Name": {
                             "Fn::Join": [
                                 "",
                                 [
@@ -294,12 +606,10 @@
                             ]
                         },
                         "Type": "A",
+                        "TTL": "300",
                         "ResourceRecords": [
                             {
-                                "Fn::GetAtt": [
-                                    "EC2Instance",
-                                    "PublicIp"
-                                ]
+                                "Ref": "EIP"
                             }
                         ]
                     }
@@ -309,8 +619,16 @@
         "DmarcRecordSetGroup": {
             "Type": "AWS::Route53::RecordSetGroup",
             "Properties": {
-                "HostedZoneId": {
-                    "Ref": "HostedZone"
+                "HostedZoneName": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "DNSDomain"
+                            },
+                            "."
+                        ]
+                    ]
                 },
                 "RecordSets": [
                     {
@@ -327,6 +645,7 @@
                             ]
                         },
                         "Type": "TXT",
+                        "TTL": "300",
                         "ResourceRecords": [
                             {
                                 "Fn::Join": [
@@ -357,6 +676,43 @@
                 ]
             }
         },
+        "DkimRecordSetGroup": {
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneName": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "DNSDomain"
+                            },
+                            "."
+                        ]
+                    ]
+                },
+                "RecordSets": [
+                    {
+                        "Name": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "mail._domainkey.",
+                                    {
+                                        "Ref": "DNSDomain"
+                                    },
+                                    "."
+                                ]
+                            ]
+                        },
+                        "Type": "TXT",
+                        "TTL": "300",
+                        "ResourceRecords": [
+                            "\"v=DKIM1; k=rsa; p=123\""
+                        ]
+                    }
+                ]
+            }
+        },
         "SecurityGroup": {
             "Type": "AWS::EC2::SecurityGroup",
             "Properties": {
@@ -377,41 +733,40 @@
                         "CidrIp": "0.0.0.0/0"
                     },
                     {
-                      "IpProtocol": "tcp",
-                      "FromPort": "995",
-                      "ToPort": "995",
-                      "CidrIp": "0.0.0.0/0"
+                        "IpProtocol": "tcp",
+                        "FromPort": "995",
+                        "ToPort": "995",
+                        "CidrIp": "0.0.0.0/0"
                     },
                     {
-                      "IpProtocol": "tcp",
-                      "FromPort": "993",
-                      "ToPort": "993",
-                      "CidrIp": "0.0.0.0/0"
-                    },
-
-                    {
-                      "IpProtocol": "tcp",
-                      "FromPort": "25",
-                      "ToPort": "25",
-                      "CidrIp": "0.0.0.0/0"
+                        "IpProtocol": "tcp",
+                        "FromPort": "993",
+                        "ToPort": "993",
+                        "CidrIp": "0.0.0.0/0"
                     },
                     {
-                      "IpProtocol": "tcp",
-                      "FromPort": "143",
-                      "ToPort": "143",
-                      "CidrIp": "0.0.0.0/0"
+                        "IpProtocol": "tcp",
+                        "FromPort": "25",
+                        "ToPort": "25",
+                        "CidrIp": "0.0.0.0/0"
                     },
                     {
-                      "IpProtocol": "tcp",
-                      "FromPort": "465",
-                      "ToPort": "465",
-                      "CidrIp": "0.0.0.0/0"
+                        "IpProtocol": "tcp",
+                        "FromPort": "143",
+                        "ToPort": "143",
+                        "CidrIp": "0.0.0.0/0"
                     },
                     {
-                      "IpProtocol": "tcp",
-                      "FromPort": "443",
-                      "ToPort": "443",
-                      "CidrIp": "0.0.0.0/0"
+                        "IpProtocol": "tcp",
+                        "FromPort": "465",
+                        "ToPort": "465",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0"
                     }
                 ]
             }
@@ -421,10 +776,1813 @@
         },
         "EC2Instance": {
             "Type": "AWS::EC2::Instance",
+            "Metadata": {
+                "AWS::CloudFormation::Init": {
+                    "configSets": {
+                        "full_install": [
+                            "cfn-bootstrap",
+                            "cron",
+                            "mysql",
+                            "postfix",
+                            "imap",
+                            "amavis",
+                            "spamassassin",
+                            "antivirus",
+                            "postgrey",
+                            "saslauthd",
+                            "roundcube",
+                            "dkim",
+                            "restore_backup"
+                        ]
+                    },
+                    "cfn-bootstrap": {
+                        "files": {
+                            "/etc/cfn/cfn-hup.conf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "[main]\n",
+                                            "interval=1\n",
+                                            "stack=",
+                                            {
+                                                "Ref": "AWS::StackId"
+                                            },
+                                            "\n",
+                                            "region=",
+                                            {
+                                                "Ref": "AWS::Region"
+                                            },
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000400",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "[cfn-auto-reloader-hook]\n",
+                                            "triggers=post.update\n",
+                                            "path=Resources.EC2Instance.Metadata.AWS::CloudFormation::Init\n",
+                                            "action=/usr/local/bin/cfn-init -v ",
+                                            "         --stack ",
+                                            {
+                                                "Ref": "AWS::StackName"
+                                            },
+                                            "         --resource EC2Instance ",
+                                            "         --configsets full_install ",
+                                            "         --region ",
+                                            {
+                                                "Ref": "AWS::Region"
+                                            },
+                                            "\n",
+                                            "runas=root\n"
+                                        ]
+                                    ]
+                                }
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "cfn-hup": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true",
+                                    "files": [
+                                        "/etc/cfn/cfn-hup.conf",
+                                        "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "cron": {
+                        "files": {
+                            "/etc/cron.d/backup": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "MAILTO=\"\"\n17 * * * * root aws s3 sync /var/mail/virtual s3://",
+                                            {
+                                                "Ref": "S3Bucket"
+                                            },
+                                            " --sse --region ",
+                                            {
+                                                "Ref": "AWS::Region"
+                                            },
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        }
+                    },
+                    "mysql": {
+                        "packages": {
+                            "apt-get": {
+                                "mysql-client": [],
+                                "mysql-server": []
+                            }
+                        },
+                        "files": {
+                            "/tmp/setup.mysql": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "DROP USER mail@localhost;\n",
+                                            "CREATE USER '",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            "'@'localhost' IDENTIFIED BY '",
+                                            {
+                                                "Ref": "DBPassword"
+                                            },
+                                            "';\n",
+                                            "GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,CREATE ROUTINE,DROP,EXECUTE ON ",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            ".* TO '",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            "'@'localhost';\n",
+                                            "GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,CREATE ROUTINE,DROP,EXECUTE ON ",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            ".* TO '",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            "'@'%';\n",
+                                            "GRANT EXECUTE ON PROCEDURE ",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            ".update_passwd TO '",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            "'@'localhost';\n",
+                                            "GRANT EXECUTE ON PROCEDURE ",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            ".update_passwd TO '",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            "'@'%';\n",
+                                            "FLUSH PRIVILEGES;\n",
+                                            "USE ",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            "\n",
+                                            "DELIMITER $$\n",
+                                            "CREATE FUNCTION update_passwd (oldpass text, cryptpass text, user text) RETURNS text MODIFIES SQL DATA\n",
+                                            "BEGIN\n",
+                                            "  DECLARE currentsalt varchar(20);\n",
+                                            "  DECLARE error text;\n",
+                                            "  SET error = 'incorrect current password';\n",
+                                            "  SELECT substring_index(substr(users.crypt,4),_latin1'$',1) INTO currentsalt FROM users WHERE id=user;\n",
+                                            "  SELECT '' INTO error FROM users WHERE id=user AND crypt=ENCRYPT(oldpass,CONCAT('$1$',currentsalt));\n",
+                                            "  UPDATE users SET crypt=cryptpass  WHERE id=user AND crypt=ENCRYPT(oldpass,CONCAT('$1$',currentsalt));\n",
+                                            "  RETURN error;\n",
+                                            "END\n",
+                                            "$$\n",
+                                            "CREATE TABLE IF NOT EXISTS `aliases` (`pkid` smallint(3) NOT NULL auto_increment,`mail` varchar(120) NOT NULL default '',`destination` varchar(120) NOT NULL default '',`enabled` tinyint(1) NOT NULL default '1',PRIMARY KEY  (`pkid`),UNIQUE KEY `mail` (`mail`)) ;\n",
+                                            "CREATE TABLE IF NOT EXISTS `domains` (`pkid` smallint(6) NOT NULL auto_increment,`domain` varchar(120) NOT NULL default '',`transport` varchar(120) NOT NULL default 'virtual:',`enabled` tinyint(1) NOT NULL default '1',PRIMARY KEY  (`pkid`), UNIQUE KEY `domain` (`domain`)) ;\n",
+                                            "CREATE TABLE IF NOT EXISTS `users` (`id` varchar(128) NOT NULL default '',`name` varchar(128) NOT NULL default '',`uid` smallint(5) unsigned NOT NULL default '5000',`gid` smallint(5) unsigned NOT NULL default '5000',`home` varchar(255) NOT NULL default '/var/spool/mail/virtual',`maildir` varchar(255) NOT NULL default 'blah/',`enabled` tinyint(1) NOT NULL default '1',`change_password` tinyint(1) NOT NULL default '1',`clear` varchar(128) NOT NULL default 'ChangeMe',`crypt` varchar(128) NOT NULL default 'sdtrusfX0Jj66',`quota` varchar(255) NOT NULL default '',PRIMARY KEY  (`id`),UNIQUE KEY `id` (`id`)) ;\n",
+                                            "INSERT INTO domains (domain) VALUES ",
+                                            "('localhost'), ",
+                                            "('localhost.localdomain'), ",
+                                            "('",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "')",
+                                            ";\n",
+                                            "INSERT INTO aliases (mail,destination) VALUES ",
+                                            "('postmaster@localhost','root@localhost'), ",
+                                            "('sysadmin@localhost','root@localhost'), ",
+                                            "('webmaster@localhost','root@localhost'), ",
+                                            "('abuse@localhost','root@localhost'), ",
+                                            "('@localhost','root@localhost'), ",
+                                            "('@localhost.localdomain','@localhost'), ",
+                                            "('root@localhost','",
+                                            {
+                                                "Ref": "Name"
+                                            },
+                                            "@",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "')",
+                                            ";\n",
+                                            "INSERT INTO users (id,name,maildir,crypt) VALUES ",
+                                            "('",
+                                            {
+                                                "Ref": "Name"
+                                            },
+                                            "@",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "','",
+                                            {
+                                                "Ref": "Name"
+                                            },
+                                            "','",
+                                            {
+                                                "Ref": "Name"
+                                            },
+                                            "@",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "/',encrypt('ChangeMe', CONCAT('$1$', MD5(RAND()))) );\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000400",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/mysql/my.cnf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "# This file is managed via CloudFormation\n",
+                                            "# Any manual changes will be lost\n",
+                                            "[client]\n",
+                                            "port = 3306\n",
+                                            "socket = /var/run/mysqld/mysqld.sock\n",
+                                            "[mysqld_safe]\n",
+                                            "socket = /var/run/mysqld/mysqld.sock\n",
+                                            "nice = 0\n",
+                                            "[mysqld]\n",
+                                            "user = mysql\n",
+                                            "pid-file = /var/run/mysqld/mysqld.pid\n",
+                                            "socket = /var/run/mysqld/mysqld.sock\n",
+                                            "port = 3306\n",
+                                            "basedir = /usr\n",
+                                            "datadir = /var/lib/mysql\n",
+                                            "tmpdir = /tmp\n",
+                                            "lc-messages-dir = /usr/share/mysql\n",
+                                            "skip-external-locking\n",
+                                            "bind-address = 127.0.0.1\n",
+                                            "key_buffer = 16M\n",
+                                            "max_allowed_packet = 16M\n",
+                                            "thread_stack = 192K\n",
+                                            "thread_cache_size = 8\n",
+                                            "myisam-recover = BACKUP\n",
+                                            "query_cache_limit = 1M\n",
+                                            "query_cache_size = 16M\n",
+                                            "general_log_file = /var/log/mysql/mysql.log\n",
+                                            "general_log = 1\n",
+                                            "log_error = /var/log/mysql/error.log\n",
+                                            "expire_logs_days = 10\n",
+                                            "max_binlog_size = 100M\n",
+                                            "[mysqldump]\n",
+                                            "quick\n",
+                                            "quote-names\n",
+                                            "max_allowed_packet = 16M\n",
+                                            "[mysql]\n",
+                                            "[isamchk]\n",
+                                            "key_buffer = 16M\n",
+                                            "!includedir /etc/mysql/conf.d/\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        },
+                        "commands": {
+                            "01_set_mysql_root_password": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "mysqladmin -u root password '",
+                                            {
+                                                "Ref": "DBRootPassword"
+                                            },
+                                            "'"
+                                        ]
+                                    ]
+                                },
+                                "test": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "$(mysql ",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            " -u root --password='",
+                                            {
+                                                "Ref": "DBRootPassword"
+                                            },
+                                            "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"
+                                        ]
+                                    ]
+                                }
+                            },
+                            "02_create_database": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "mysql -u root --password='",
+                                            {
+                                                "Ref": "DBRootPassword"
+                                            },
+                                            "' < /tmp/setup.mysql"
+                                        ]
+                                    ]
+                                },
+                                "test": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "$(mysql ",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            " -u root --password='",
+                                            {
+                                                "Ref": "DBRootPassword"
+                                            },
+                                            "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"
+                                        ]
+                                    ]
+                                }
+                            },
+                            "03_cleanup": {
+                                "command": "#rm /tmp/setup.mysql"
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "mysql": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true",
+                                    "files": [
+                                        "/etc/mysql/my.cnf"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "postfix": {
+                        "packages": {
+                            "apt-get": {
+                                "postfix": [],
+                                "postfix-mysql": []
+                            }
+                        },
+                        "files": {
+                            "/etc/mailname": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            {
+                                                "Ref": "Name"
+                                            },
+                                            ".",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            }
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/postfix/main.cf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "# This file is managed by CloudFormation\n",
+                                            "# Any manual changes wil be lost.\n",
+                                            "smtpd_banner = $myhostname ESMTP $mail_name\n",
+                                            "biff = no\n",
+                                            "append_dot_mydomain = no\n",
+                                            "readme_directory = no\n",
+                                            "smtp_tls_security_level = may\n",
+                                            "smtpd_tls_security_level = may\n",
+                                            "smtp_tls_note_starttls_offer = yes\n",
+                                            "smtpd_tls_loglevel = 1\n",
+                                            "smtpd_tls_received_header = yes\n",
+                                            "smtpd_tls_session_cache_timeout = 3600s\n",
+                                            "tls_random_source = dev:/dev/urandom\n",
+                                            "smtpd_tls_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem\n",
+                                            "smtpd_tls_key_file=/etc/ssl/private/ssl-cert-snakeoil.key\n",
+                                            "smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt\n",
+                                            "smtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination\n",
+                                            "alias_maps = hash:/etc/aliases\n",
+                                            "alias_database = hash:/etc/aliases\n",
+                                            "myorigin = /etc/mailname\n",
+                                            "mydestination =\n",
+                                            "relayhost = \n",
+                                            "mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\n",
+                                            "mailbox_size_limit = 0\n",
+                                            "recipient_delimiter = +\n",
+                                            "inet_interfaces = all\n",
+                                            "inet_protocols = all\n",
+                                            "delay_warning_time = 4h\n",
+                                            "unknown_local_recipient_reject_code = 450\n",
+                                            "maximal_queue_lifetime = 7d\n",
+                                            "minimal_backoff_time = 1000s\n",
+                                            "maximal_backoff_time = 8000s\n",
+                                            "smtp_helo_timeout = 60s\n",
+                                            "smtpd_recipient_limit = 16\n",
+                                            "smtpd_soft_error_limit = 3\n",
+                                            "smtpd_hard_error_limit = 12\n",
+                                            "smtpd_helo_restrictions = permit_mynetworks, warn_if_reject reject_non_fqdn_hostname, reject_invalid_hostname, permit\n",
+                                            "smtpd_sender_restrictions = permit_sasl_authenticated, permit_mynetworks, warn_if_reject reject_non_fqdn_sender, reject_unknown_sender_domain, reject_unauth_pipelining, permit\n",
+                                            "smtpd_client_restrictions = reject_rbl_client sbl.spamhaus.org, reject_rbl_client blackholes.easynet.nl\n",
+                                            "smtpd_recipient_restrictions = reject_unauth_pipelining, permit_mynetworks, permit_sasl_authenticated, reject_non_fqdn_recipient, reject_unknown_recipient_domain, reject_unauth_destination, check_policy_service inet:127.0.0.1:10023, permit\n",
+                                            "smtpd_data_restrictions = reject_unauth_pipelining\n",
+                                            "smtpd_helo_required = yes\n",
+                                            "smtpd_delay_reject = yes\n",
+                                            "disable_vrfy_command = yes\n",
+                                            "virtual_mailbox_base = /var/spool/mail/virtual\n",
+                                            "virtual_mailbox_maps = mysql:/etc/postfix/mysql_mailbox.cf\n",
+                                            "virtual_alias_maps = mysql:/etc/postfix/mysql_alias.cf\n",
+                                            "virtual_mailbox_domains = mysql:/etc/postfix/mysql_domains.cf\n",
+                                            "virtual_uid_maps = static:5000\n",
+                                            "virtual_gid_maps = static:5000\n",
+                                            "content_filter = amavis:[127.0.0.1]:10024\n",
+                                            "smtpd_sasl_auth_enable = yes\n",
+                                            "broken_sasl_auth_clients = no\n",
+                                            "smtpd_sasl_security_options = noanonymous\n",
+                                            "smtpd_sasl_local_domain =\n",
+                                            "milter_protocol = 2\n",
+                                            "milter_default_action = accept\n",
+                                            "smtpd_milters = inet:localhost:12301\n",
+                                            "non_smtpd_milters = inet:localhost:12301\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/postfix/master.cf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "# This file is managed by CloudFormation\n",
+                                            "# Any manual changes wil be lost.\n",
+                                            "smtp      inet  n       -       -       -       -       smtpd\n",
+                                            "submission inet n       -       -       -       -       smtpd\n",
+                                            "  -o smtpd_sasl_auth_enable=yes\n",
+                                            "  -o smtpd_tls_auth_only=yes\n",
+                                            "  -o smtpd_client_restrictions=permit_sasl_authenticated,reject_unauth_destination,reject\n",
+                                            "  -o smtpd_sasl_security_options=noanonymous,noplaintext\n",
+                                            "  -o smtpd_sasl_tls_security_options=noanonymous\n",
+                                            "smtps     inet  n       -       -       -       -       smtpd\n",
+                                            "  -o smtpd_tls_wrappermode=yes\n",
+                                            "  -o smtpd_sasl_auth_enable=yes\n",
+                                            "  -o smtpd_tls_auth_only=yes\n",
+                                            "  -o smtpd_client_restrictions=permit_sasl_authenticated,reject\n",
+                                            "  -o smtpd_sasl_security_options=noanonymous,noplaintext\n",
+                                            "  -o smtpd_sasl_tls_security_options=noanonymous\n",
+                                            "pickup    unix  n       -       -       60      1       pickup\n",
+                                            " -o content_filter=\n",
+                                            " -o receive_override_options=no_header_body_checks\n",
+                                            "cleanup   unix  n       -       -       -       0       cleanup\n",
+                                            "qmgr      unix  n       -       n       300     1       qmgr\n",
+                                            "tlsmgr    unix  -       -       -       1000?   1       tlsmgr\n",
+                                            "rewrite   unix  -       -       -       -       -       trivial-rewrite\n",
+                                            "bounce    unix  -       -       -       -       0       bounce\n",
+                                            "defer     unix  -       -       -       -       0       bounce\n",
+                                            "trace     unix  -       -       -       -       0       bounce\n",
+                                            "verify    unix  -       -       -       -       1       verify\n",
+                                            "flush     unix  n       -       -       1000?   0       flush\n",
+                                            "proxymap  unix  -       -       n       -       -       proxymap\n",
+                                            "proxywrite unix -       -       n       -       1       proxymap\n",
+                                            "smtp      unix  -       -       -       -       -       smtp\n",
+                                            "relay     unix  -       -       -       -       -       smtp\n",
+                                            "showq     unix  n       -       -       -       -       showq\n",
+                                            "error     unix  -       -       -       -       -       error\n",
+                                            "retry     unix  -       -       -       -       -       error\n",
+                                            "discard   unix  -       -       -       -       -       discard\n",
+                                            "local     unix  -       n       n       -       -       local\n",
+                                            "virtual   unix  -       n       n       -       -       virtual\n",
+                                            "lmtp      unix  -       -       -       -       -       lmtp\n",
+                                            "anvil     unix  -       -       -       -       1       anvil\n",
+                                            "scache    unix  -       -       -       -       1       scache\n",
+                                            "maildrop  unix  -       n       n       -       -       pipe\n",
+                                            "  flags=DRhu user=vmail argv=/usr/bin/maildrop -d ${recipient}\n",
+                                            "uucp      unix  -       n       n       -       -       pipe\n",
+                                            "  flags=Fqhu user=uucp argv=uux -r -n -z -a$sender - $nexthop!rmail ($recipient)\n",
+                                            "ifmail    unix  -       n       n       -       -       pipe\n",
+                                            "  flags=F user=ftn argv=/usr/lib/ifmail/ifmail -r $nexthop ($recipient)\n",
+                                            "bsmtp     unix  -       n       n       -       -       pipe\n",
+                                            "  flags=Fq. user=bsmtp argv=/usr/lib/bsmtp/bsmtp -t$nexthop -f$sender $recipient\n",
+                                            "scalemail-backend unix - n n - 2 pipe\n",
+                                            "  flags=R user=scalemail argv=/usr/lib/scalemail/bin/scalemail-store ${nexthop} ${user} ${extension}\n",
+                                            "mailman   unix  -       n       n       -       -       pipe\n",
+                                            "  flags=FR user=list argv=/usr/lib/mailman/bin/postfix-to-mailman.py\n",
+                                            "  ${nexthop} ${user}\n",
+                                            "amavis      unix    -       -       -       -       2       smtp\n",
+                                            "        -o smtp_data_done_timeout=1200\n",
+                                            "        -o smtp_send_xforward_command=yes\n",
+                                            "        -o disable_dns_lookups=yes\n",
+                                            "        -o max_use=20\n",
+                                            "127.0.0.1:10025 inet    n       -       -       -       -       smtpd\n",
+                                            "        -o content_filter=\n",
+                                            "        -o local_recipient_maps=\n",
+                                            "        -o relay_recipient_maps=\n",
+                                            "        -o smtpd_restriction_classes=\n",
+                                            "        -o smtpd_delay_reject=no\n",
+                                            "        -o smtpd_client_restrictions=permit_mynetworks,reject\n",
+                                            "        -o smtpd_helo_restrictions=\n",
+                                            "        -o smtpd_sender_restrictions=\n",
+                                            "        -o smtpd_recipient_restrictions=permit_mynetworks,reject\n",
+                                            "        -o smtpd_data_restrictions=reject_unauth_pipelining\n",
+                                            "        -o smtpd_end_of_data_restrictions=\n",
+                                            "        -o mynetworks=127.0.0.0/8\n",
+                                            "        -o smtpd_error_sleep_time=0\n",
+                                            "        -o smtpd_soft_error_limit=1001\n",
+                                            "        -o smtpd_hard_error_limit=1000\n",
+                                            "        -o smtpd_client_connection_count_limit=0\n",
+                                            "        -o smtpd_client_connection_rate_limit=0\n",
+                                            "        -o receive_override_options=no_header_body_checks,no_unknown_recipient_checks\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/postfix/mysql_mailbox.cf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "user=",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            "\n",
+                                            "password=",
+                                            {
+                                                "Ref": "DBPassword"
+                                            },
+                                            "\n",
+                                            "dbname=",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            "\n",
+                                            "table=users\n",
+                                            "select_field=maildir\n",
+                                            "where_field=id\n",
+                                            "hosts=127.0.0.1\n",
+                                            "additional_conditions = and enabled = 1\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/postfix/mysql_alias.cf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "user=",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            "\n",
+                                            "password=",
+                                            {
+                                                "Ref": "DBPassword"
+                                            },
+                                            "\n",
+                                            "dbname=",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            "\n",
+                                            "table=aliases\n",
+                                            "select_field=destination\n",
+                                            "where_field=mail\n",
+                                            "hosts=127.0.0.1\n",
+                                            "additional_conditions = and enabled = 1\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/postfix/mysql_domain.cf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "user=",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            "\n",
+                                            "password=",
+                                            {
+                                                "Ref": "DBPassword"
+                                            },
+                                            "\n",
+                                            "dbname=",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            "\n",
+                                            "table=domains\n",
+                                            "select_field=domain\n",
+                                            "where_field=domain\n",
+                                            "hosts=127.0.0.1\n",
+                                            "additional_conditions = and enabled = 1\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/postfix/sasl/smtpd.conf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "pwcheck_method: saslauthd\n",
+                                            "mech_list: plain login cram-md5 digest-md5\n",
+                                            "log_level: 7\n",
+                                            "allow_plaintext: true\n",
+                                            "auxprop_plugin: sql\n",
+                                            "sql_engine: mysql\n",
+                                            "sql_hostnames: 127.0.0.1\n",
+                                            "sql_user: ",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            "\n",
+                                            "sql_passwd: ",
+                                            {
+                                                "Ref": "DBPassword"
+                                            },
+                                            "\n",
+                                            "sql_database: ",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            "\n",
+                                            "sql_select: select crypt from users where id='%u@%r' and enabled = 1\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "postfix": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true",
+                                    "files": [
+                                        "/etc/mailname",
+                                        "/etc/postfix/main.cf",
+                                        "/etc/postfix/master.cf",
+                                        "/etc/postfix/mysql_mailbox.cf",
+                                        "/etc/postfix/mysql_alias.cf",
+                                        "/etc/postfix/mysql_domain.cf"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "imap": {
+                        "packages": {
+                            "apt-get": {
+                                "courier-base": [],
+                                "courier-authdaemon": [],
+                                "courier-authlib-mysql": [],
+                                "courier-imap": [],
+                                "courier-imap-ssl": [],
+                                "courier-ssl": []
+                            }
+                        },
+                        "files": {
+                            "/etc/courier/authdaemonrc": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "authmodulelist=\"authmysql\"\n",
+                                            "authmodulelistorig=\"authuserdb authpam authpgsql authldap authmysql authcustom authpipe\"\n",
+                                            "daemons=5\n",
+                                            "authdaemonvar=/var/run/courier/authdaemon\n",
+                                            "DEBUG_LOGIN=2\n",
+                                            "DEFAULTOPTIONS=\"\"\n",
+                                            "LOGGEROPTS=\"\"\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000660",
+                                "owner": "daemon",
+                                "group": "daemon"
+                            },
+                            "/etc/courier/authmysqlrc": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "MYSQL_SERVER localhost\n",
+                                            "MYSQL_USERNAME ",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            "\n",
+                                            "MYSQL_PASSWORD ",
+                                            {
+                                                "Ref": "DBPassword"
+                                            },
+                                            "\n",
+                                            "MYSQL_PORT 0\n",
+                                            "MYSQL_OPT 0\n",
+                                            "MYSQL_DATABASE ",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            "\n",
+                                            "MYSQL_USER_TABLE users\n",
+                                            "MYSQL_CRYPT_PWFIELD crypt\n",
+                                            "MYSQL_UID_FIELD uid\n",
+                                            "MYSQL_GID_FIELD gid\n",
+                                            "MYSQL_LOGIN_FIELD id\n",
+                                            "MYSQL_HOME_FIELD home\n",
+                                            "MYSQL_NAME_FIELD name\n",
+                                            "MYSQL_MAILDIR_FIELD concat(home,'/',maildir)\n",
+                                            "MYSQL_WHERE_CLAUSE enabled=1\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000660",
+                                "owner": "daemon",
+                                "group": "daemon"
+                            },
+                            "/etc/courier/imapd": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "ADDRESS=0\n",
+                                            "PORT=143\n",
+                                            "MAXDAEMONS=40\n",
+                                            "MAXPERIP=20\n",
+                                            "PIDFILE=/var/run/courier/imapd.pid\n",
+                                            "TCPDOPTS=\"-nodnslookup -noidentlookup\"\n",
+                                            "LOGGEROPTS=\"-name=imapd\"\n",
+                                            "IMAP_CAPABILITY=\"IMAP4rev1 UIDPLUS CHILDREN NAMESPACE THREAD=ORDEREDSUBJECT THREAD=REFERENCES SORT QUOTA AUTH=CRAM-MD5 AUTH=CRAM-SHA1 AUTH=CRAM-SHA256 IDLE\"\n",
+                                            "IMAP_KEYWORDS=1\n",
+                                            "IMAP_ACL=1\n",
+                                            "IMAP_CAPABILITY_ORIG=\"IMAP4rev1 UIDPLUS CHILDREN NAMESPACE THREAD=ORDEREDSUBJECT THREAD=REFERENCES SORT QUOTA AUTH=CRAM-MD5 AUTH=CRAM-SHA1 AUTH=CRAM-SHA256 IDLE\"\n",
+                                            "IMAP_PROXY=0\n",
+                                            "IMAP_PROXY_FOREIGN=0\n",
+                                            "IMAP_IDLE_TIMEOUT=60\n",
+                                            "IMAP_MAILBOX_SANITY_CHECK=1\n",
+                                            "IMAP_CAPABILITY_TLS=\"$IMAP_CAPABILITY AUTH=PLAIN\"\n",
+                                            "IMAP_CAPABILITY_TLS_ORIG=\"$IMAP_CAPABILITY_ORIG AUTH=PLAIN\"\n",
+                                            "IMAP_DISABLETHREADSORT=0\n",
+                                            "IMAP_CHECK_ALL_FOLDERS=0\n",
+                                            "IMAP_OBSOLETE_CLIENT=0\n",
+                                            "IMAP_UMASK=022\n",
+                                            "IMAP_ULIMITD=131072\n",
+                                            "IMAP_USELOCKS=1\n",
+                                            "IMAP_SHAREDINDEXFILE=/etc/courier/shared/index\n",
+                                            "IMAP_ENHANCEDIDLE=0\n",
+                                            "IMAP_TRASHFOLDERNAME=Trash\n",
+                                            "IMAP_EMPTYTRASH=Trash:7\n",
+                                            "IMAP_MOVE_EXPUNGE_TO_TRASH=0\n",
+                                            "SENDMAIL=/usr/sbin/sendmail\n",
+                                            "HEADERFROM=X-IMAP-Sender\n",
+                                            "IMAPDSTART=YES\n",
+                                            "MAILDIRPATH=Maildir\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/courier/imapd-ssl": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "SSLPORT=993\n",
+                                            "SSLADDRESS=0\n",
+                                            "SSLPIDFILE=/var/run/courier/imapd-ssl.pid\n",
+                                            "SSLLOGGEROPTS=\"-name=imapd-ssl\"\n",
+                                            "IMAPDSSLSTART=YES\n",
+                                            "IMAPDSTARTTLS=YES\n",
+                                            "IMAP_TLS_REQUIRED=0\n",
+                                            "COURIERTLS=/usr/bin/couriertls\n",
+                                            "TLS_KX_LIST=ALL\n",
+                                            "TLS_COMPRESSION=ALL\n",
+                                            "TLS_CERTS=X509\n",
+                                            "TLS_CERTFILE=/etc/courier/imapd.pem\n",
+                                            "TLS_TRUSTCERTS=/etc/ssl/certs\n",
+                                            "TLS_VERIFYPEER=NONE\n",
+                                            "TLS_CACHEFILE=/var/lib/courier/couriersslcache\n",
+                                            "TLS_CACHESIZE=524288\n",
+                                            "MAILDIRPATH=Maildir\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "courier-authdaemon": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true",
+                                    "files": [
+                                        "/etc/courier/authdaemonrc",
+                                        "/etc/courier/authmysqlrc"
+                                    ]
+                                },
+                                "courier-imap": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true",
+                                    "files": [
+                                        "/etc/courier/imapd.cnf",
+                                        "/etc/courier/imapd"
+                                    ]
+                                },
+                                "courier-imap-ssl": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true",
+                                    "files": [
+                                        "/etc/courier/imapd-ssl"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "amavis": {
+                        "packages": {
+                            "apt-get": {
+                                "amavisd-new": []
+                            }
+                        },
+                        "files": {
+                            "/etc/amavis/conf.d/15-content_filter_mode": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "use strict;\n",
+                                            "@bypass_virus_checks_maps = (\n",
+                                            "   \\%bypass_virus_checks, \\@bypass_virus_checks_acl, \\$bypass_virus_checks_re);\n",
+                                            "@bypass_spam_checks_maps = (\n",
+                                            "   \\%bypass_spam_checks, \\@bypass_spam_checks_acl, \\$bypass_spam_checks_re);\n",
+                                            "1;  # ensure a defined return\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/amavis/conf.d/50-user": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "use strict;\n",
+                                            "@local_domains_acl = qw(.);\n",
+                                            "$log_level = 1;\n",
+                                            "$syslog_priority = 'info';\n",
+                                            "$sa_kill_level_deflt = 8.0; # triggers spam evasive actions\n",
+                                            "$final_spam_destiny = D_DISCARD;\n",
+                                            "1;  # ensure a defined return\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        }
+                    },
+                    "spamassassin": {
+                        "packages": {
+                            "apt-get": {
+                                "spamassassin": [],
+                                "spamc": []
+                            }
+                        },
+                        "files": {
+                            "/etc/default/spamassassin": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "ENABLED=1\n",
+                                            "OPTIONS=\"--create-prefs --max-children 5 --helper-home-dir\"\n",
+                                            "PIDFILE=\"/var/run/spamd.pid\"\n",
+                                            "CRON=0\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/spamassassin/local.cf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "use_bayes 1\n",
+                                            "bayes_auto_learn 1\n",
+                                            "ifplugin Mail::SpamAssassin::Plugin::Shortcircuit\n",
+                                            "endif # Mail::SpamAssassin::Plugin::Shortcircuit\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "spamassassin": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true",
+                                    "files": [
+                                        "/etc/default/spamassassin",
+                                        "/etc/spamassassin/local.cf"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "antivirus": {
+                        "packages": {
+                            "apt-get": {
+                                "clamav": [],
+                                "clamav-base": [],
+                                "libclamav6": [],
+                                "clamav-daemon": [],
+                                "clamav-freshclam": []
+                            }
+                        },
+                        "commands": {
+                            "adduser_clamav_amavis": {
+                                "command": "adduser clamav amavis",
+                                "ignoreErrors": "true"
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "clamav-daemon": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true"
+                                },
+                                "clamav-freshclam": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true"
+                                }
+                            }
+                        }
+                    },
+                    "postgrey": {
+                        "packages": {
+                            "apt-get": {
+                                "postgrey": []
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "postgrey": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true"
+                                }
+                            }
+                        }
+                    },
+                    "saslauthd": {
+                        "packages": {
+                            "apt-get": {
+                                "libsasl2-modules": [],
+                                "libsasl2-modules-sql": [],
+                                "libgsasl7": [],
+                                "libauthen-sasl-cyrus-perl": [],
+                                "sasl2-bin": [],
+                                "libpam-mysql": []
+                            }
+                        },
+                        "commands": {
+                            "adduser_postfix_sasl": {
+                                "command": "adduser postfix sasl",
+                                "ignoreErrors": "true"
+                            },
+                            "mkdir_var_spool_postfix_var_run_saslauthd": {
+                                "command": "mkdir -p /var/spool/postfix/var/run/saslauthd",
+                                "ignoreErrors": "true"
+                            }
+                        },
+                        "files": {
+                            "/etc/default/saslauthd": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "START=yes\n",
+                                            "DESC=\"SASL Authentication Daemon\"\n",
+                                            "NAME=\"saslauthd\"\n",
+                                            "MECHANISMS=\"pam\"\n",
+                                            "MECH_OPTIONS=\"\"\n",
+                                            "THREADS=5\n",
+                                            "OPTIONS=\"-r -c -m /var/spool/postfix/var/run/saslauthd\"\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/pam.d/smtp": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "auth required pam_mysql.so user=",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            " passwd=",
+                                            {
+                                                "Ref": "DBPassword"
+                                            },
+                                            " host=127.0.0.1 db=",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            " table=users usercolumn=id passwdcolumn=crypt crypt=1\n",
+                                            "account sufficient pam_mysql.so user=",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            " passwd=",
+                                            {
+                                                "Ref": "DBPassword"
+                                            },
+                                            " host=127.0.0.1 db=",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            " table=users usercolumn=id passwdcolumn=crypt crypt=1\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "saslauthd": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true",
+                                    "files": [
+                                        "/etc/default/saslauthd",
+                                        "/etc/pam.d/smtp"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "roundcube": {
+                        "packages": {
+                            "apt-get": {
+                                "roundcube": [],
+                                "roundcube-mysql": [],
+                                "roundcube-plugins": []
+                            }
+                        },
+                        "commands": {
+                            "ln_mcrypt": {
+                                "command": "ln -s /etc/php5/mods-available/mcrypt.ini /etc/php5/apache2/conf.d/20-mcrypt.ini",
+                                "ignoreErrors": "true"
+                            },
+                            "a2ensite_default-ssl": {
+                                "command": "/usr/sbin/a2ensite default-ssl.conf",
+                                "ignoreErrors": "true"
+                            }
+                        },
+                        "files": {
+                            "/etc/apache2/sites-available/default-ssl.conf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "<IfModule mod_ssl.c>\n",
+                                            " <VirtualHost _default_:443>\n",
+                                            "  ServerAdmin webmaster@localhost\n",
+                                            "  DocumentRoot /var/lib/roundcube\n",
+                                            "  ErrorLog ${APACHE_LOG_DIR}/error.log\n",
+                                            "  CustomLog ${APACHE_LOG_DIR}/access.log combined\n",
+                                            "  SSLEngine on\n",
+                                            "  SSLCertificateFile /etc/ssl/certs/ssl-cert-snakeoil.pem\n",
+                                            "  SSLCertificateKeyFile /etc/ssl/private/ssl-cert-snakeoil.key\n",
+                                            "  <FilesMatch \"\\.(cgi|shtml|phtml|php)$\">\n",
+                                            "    SSLOptions +StdEnvVars\n",
+                                            "  </FilesMatch>\n",
+                                            "  <Directory /usr/lib/cgi-bin>\n",
+                                            "    SSLOptions +StdEnvVars\n",
+                                            "  </Directory>\n",
+                                            "  BrowserMatch \"MSIE [2-6]\" \\\n",
+                                            "    nokeepalive ssl-unclean-shutdown \\\n",
+                                            "    downgrade-1.0 force-response-1.0\n",
+                                            "  BrowserMatch \"MSIE [17-9]\" ssl-unclean-shutdown\n",
+                                            " </VirtualHost>\n",
+                                            "</IfModule>\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/apache2/sites-available/000-default.conf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "<VirtualHost *:80>\n",
+                                            "  ServerAdmin webmaster@localhost\n",
+                                            "  DocumentRoot /var/lib/roundcube\n",
+                                            "  ErrorLog ${APACHE_LOG_DIR}/error.log\n",
+                                            "  CustomLog ${APACHE_LOG_DIR}/access.log combined\n",
+                                            "</VirtualHost>\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/roundcube/apache.conf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "Alias /roundcube/program/js/tiny_mce/ /usr/share/tinymce/www/\n",
+                                            "Alias /roundcube /var/lib/roundcube\n",
+                                            "<Directory \"/usr/share/tinymce/www/\">\n",
+                                            "      Options Indexes MultiViews FollowSymLinks\n",
+                                            "      AllowOverride None\n",
+                                            "      <IfVersion >= 2.3>\n",
+                                            "        Require all granted\n",
+                                            "      </IfVersion> \n",
+                                            "      <IfVersion < 2.3>\n",
+                                            "        Order allow,deny\n",
+                                            "        Allow from all\n",
+                                            "      </IfVersion>\n",
+                                            "</Directory>\n",
+                                            "<Directory /var/lib/roundcube/>\n",
+                                            "  Options +FollowSymLinks\n",
+                                            "  # This is needed to parse /var/lib/roundcube/.htaccess. See its\n",
+                                            "  # content before setting AllowOverride to None.\n",
+                                            "  AllowOverride All\n",
+                                            "  <IfVersion >= 2.3>\n",
+                                            "    Require all granted\n",
+                                            "  </IfVersion> \n",
+                                            "  <IfVersion < 2.3>\n",
+                                            "    Order allow,deny\n",
+                                            "    Allow from all\n",
+                                            "  </IfVersion>\n",
+                                            "</Directory>\n",
+                                            "# Protecting basic directories:\n",
+                                            "<Directory /var/lib/roundcube/config>\n",
+                                            "        Options -FollowSymLinks\n",
+                                            "        AllowOverride None\n",
+                                            "</Directory>\n",
+                                            "<Directory /var/lib/roundcube/temp>\n",
+                                            "        Options -FollowSymLinks\n",
+                                            "        AllowOverride None\n",
+                                            "        <IfVersion >= 2.3>\n",
+                                            "          Require all denied\n",
+                                            "        </IfVersion> \n",
+                                            "        <IfVersion < 2.3>\n",
+                                            "          Order allow,deny\n",
+                                            "          Deny from all\n",
+                                            "        </IfVersion>\n",
+                                            "</Directory>\n",
+                                            "<Directory /var/lib/roundcube/logs>\n",
+                                            "        Options -FollowSymLinks\n",
+                                            "        AllowOverride None\n",
+                                            "        <IfVersion >= 2.3>\n",
+                                            "          Require all denied\n",
+                                            "        </IfVersion> \n",
+                                            "        <IfVersion < 2.3>\n",
+                                            "          Order allow,deny\n",
+                                            "          Deny from all\n",
+                                            "        </IfVersion>\n",
+                                            "</Directory>\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/roundcube/main.inc.php": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "<?php\n",
+                                            "$rcmail_config = array();\n",
+                                            "$rcmail_config['debug_level'] = 1;\n",
+                                            "$rcmail_config['log_driver'] = 'file';\n",
+                                            "$rcmail_config['log_date_format'] = 'd-M-Y H:i:s O';\n",
+                                            "$rcmail_config['syslog_id'] = 'roundcube';\n",
+                                            "$rcmail_config['syslog_facility'] = LOG_USER;\n",
+                                            "$rcmail_config['smtp_log'] = true;\n",
+                                            "$rcmail_config['log_logins'] = false;\n",
+                                            "$rcmail_config['log_session'] = false;\n",
+                                            "$rcmail_config['sql_debug'] = false;\n",
+                                            "$rcmail_config['imap_debug'] = true;\n",
+                                            "$rcmail_config['ldap_debug'] = false;\n",
+                                            "$rcmail_config['smtp_debug'] = false;\n",
+                                            "$rcmail_config['default_host'] = 'ssl://localhost';\n",
+                                            "$rcmail_config['default_port'] = 993;\n",
+                                            "$rcmail_config['imap_auth_type'] = 'PLAIN';\n",
+                                            "$rcmail_config['imap_delimiter'] = null;\n",
+                                            "$rcmail_config['imap_ns_personal'] = null;\n",
+                                            "$rcmail_config['imap_ns_other']    = null;\n",
+                                            "$rcmail_config['imap_ns_shared']   = null;\n",
+                                            "$rcmail_config['imap_force_caps'] = false;\n",
+                                            "$rcmail_config['imap_force_lsub'] = false;\n",
+                                            "$rcmail_config['imap_force_ns'] = true;\n",
+                                            "$rcmail_config['imap_timeout'] = 0;\n",
+                                            "$rcmail_config['imap_auth_cid'] = null;\n",
+                                            "$rcmail_config['imap_auth_pw'] = null;\n",
+                                            "$rcmail_config['imap_cache'] = null;\n",
+                                            "$rcmail_config['messages_cache'] = false;\n",
+                                            "$rcmail_config['smtp_server'] = 'ssl://localhost';\n",
+                                            "$rcmail_config['smtp_port'] = 465;\n",
+                                            "$rcmail_config['smtp_user'] = '%u';\n",
+                                            "$rcmail_config['smtp_pass'] = '%p';\n",
+                                            "$rcmail_config['smtp_auth_type'] = 'login';\n",
+                                            "$rcmail_config['smtp_auth_cid'] = null;\n",
+                                            "$rcmail_config['smtp_auth_pw'] = null;\n",
+                                            "$rcmail_config['smtp_helo_host'] = '",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "';\n",
+                                            "$rcmail_config['smtp_timeout'] = 0;\n",
+                                            "$rcmail_config['enable_installer'] = false;\n",
+                                            "$rcmail_config['dont_override'] = array();\n",
+                                            "$rcmail_config['support_url'] = '';\n",
+                                            "$rcmail_config['skin_logo'] = null;\n",
+                                            "$rcmail_config['auto_create_user'] = true;\n",
+                                            "$rcmail_config['user_aliases'] = false;\n",
+                                            "$rcmail_config['log_dir'] = 'logs/';\n",
+                                            "$rcmail_config['temp_dir'] = 'temp/';\n",
+                                            "$rcmail_config['message_cache_lifetime'] = '10d';\n",
+                                            "$rcmail_config['force_https'] = true;\n",
+                                            "$rcmail_config['use_https'] = false;\n",
+                                            "$rcmail_config['login_autocomplete'] = 0;\n",
+                                            "$rcmail_config['login_lc'] = 2;\n",
+                                            "$rcmail_config['skin_include_php'] = false;\n",
+                                            "$rcmail_config['display_version'] = false;\n",
+                                            "$rcmail_config['session_lifetime'] = 10;\n",
+                                            "$rcmail_config['session_domain'] = '';\n",
+                                            "$rcmail_config['session_name'] = null;\n",
+                                            "$rcmail_config['session_auth_name'] = null;\n",
+                                            "$rcmail_config['session_path'] = null;\n",
+                                            "$rcmail_config['session_storage'] = 'db';\n",
+                                            "$rcmail_config['memcache_hosts'] = null;\n",
+                                            "$rcmail_config['ip_check'] = false;\n",
+                                            "$rcmail_config['referer_check'] = false;\n",
+                                            "$rcmail_config['x_frame_options'] = 'sameorigin';\n",
+                                            "$rcmail_config['des_key'] = 'NBmunyfoUsmkhg8eGGSvP466';\n",
+                                            "$rcmail_config['username_domain'] = '';\n",
+                                            "$rcmail_config['mail_domain'] = '';\n",
+                                            "$rcmail_config['password_charset'] = 'ISO-8859-1';\n",
+                                            "$rcmail_config['sendmail_delay'] = 1;\n",
+                                            "$rcmail_config['max_recipients'] = 0;\n",
+                                            "$rcmail_config['max_group_members'] = 0;\n",
+                                            "$rcmail_config['useragent'] = 'Roundcube Webmail/'.RCMAIL_VERSION;\n",
+                                            "$rcmail_config['product_name'] = 'Roundcube Webmail';\n",
+                                            "$rcmail_config['include_host_config'] = false;\n",
+                                            "$rcmail_config['generic_message_footer'] = '';\n",
+                                            "$rcmail_config['generic_message_footer_html'] = '';\n",
+                                            "$rcmail_config['http_received_header'] = false;\n",
+                                            "$rcmail_config['http_received_header_encrypt'] = false;\n",
+                                            "$rcmail_config['mail_header_delimiter'] = NULL;\n",
+                                            "$rcmail_config['line_length'] = 72;\n",
+                                            "$rcmail_config['send_format_flowed'] = true;\n",
+                                            "$rcmail_config['mdn_use_from'] = false;\n",
+                                            "$rcmail_config['identities_level'] = 0;\n",
+                                            "$rcmail_config['client_mimetypes'] = null;\n",
+                                            "$rcmail_config['mime_magic'] = null;\n",
+                                            "$rcmail_config['mime_types'] = null;\n",
+                                            "$rcmail_config['im_identify_path'] = null;\n",
+                                            "$rcmail_config['im_convert_path'] = null;\n",
+                                            "$rcmail_config['image_thumbnail_size'] = 240;\n",
+                                            "$rcmail_config['contact_photo_size'] = 160;\n",
+                                            "$rcmail_config['email_dns_check'] = false;\n",
+                                            "$rcmail_config['no_save_sent_messages'] = false;\n",
+                                            "$rcmail_config['plugins'] = array('password');\n",
+                                            "$rcmail_config['message_sort_col'] = '';\n",
+                                            "$rcmail_config['message_sort_order'] = 'DESC';\n",
+                                            "$rcmail_config['list_cols'] = array('subject', 'status', 'fromto', 'date', 'size', 'flag', 'attachment');\n",
+                                            "$rcmail_config['language'] = 'en_US';\n",
+                                            "$rcmail_config['date_format'] = 'Y-m-d';\n",
+                                            "$rcmail_config['date_formats'] = array('Y-m-d', 'Y/m/d', 'Y.m.d', 'd-m-Y', 'd/m/Y', 'd.m.Y', 'j.n.Y');\n",
+                                            "$rcmail_config['time_format'] = 'H:i';\n",
+                                            "$rcmail_config['time_formats'] = array('G:i', 'H:i', 'g:i a', 'h:i A');\n",
+                                            "$rcmail_config['date_short'] = 'D H:i';\n",
+                                            "$rcmail_config['date_long'] = 'Y-m-d H:i';\n",
+                                            "$rcmail_config['drafts_mbox'] = 'Drafts';\n",
+                                            "$rcmail_config['junk_mbox'] = 'Junk';\n",
+                                            "$rcmail_config['sent_mbox'] = 'Sent';\n",
+                                            "$rcmail_config['trash_mbox'] = 'Trash';\n",
+                                            "$rcmail_config['default_folders'] = array('INBOX', 'Drafts', 'Sent', 'Junk', 'Trash');\n",
+                                            "$rcmail_config['create_default_folders'] = true;\n",
+                                            "$rcmail_config['protect_default_folders'] = true;\n",
+                                            "$rcmail_config['quota_zero_as_unlimited'] = false;\n",
+                                            "$rcmail_config['enable_spellcheck'] = true;\n",
+                                            "$rcmail_config['spellcheck_dictionary'] = false;\n",
+                                            "$rcmail_config['spellcheck_engine'] = 'pspell';\n",
+                                            "$rcmail_config['spellcheck_uri'] = '';\n",
+                                            "$rcmail_config['spellcheck_languages'] = NULL;\n",
+                                            "$rcmail_config['spellcheck_ignore_caps'] = false;\n",
+                                            "$rcmail_config['spellcheck_ignore_nums'] = false;\n",
+                                            "$rcmail_config['spellcheck_ignore_syms'] = false;\n",
+                                            "$rcmail_config['recipients_separator'] = ',';\n",
+                                            "$rcmail_config['max_pagesize'] = 200;\n",
+                                            "$rcmail_config['min_refresh_interval'] = 60;\n",
+                                            "$rcmail_config['upload_progress'] = false;\n",
+                                            "$rcmail_config['undo_timeout'] = 0;\n",
+                                            "$rcmail_config['address_book_type'] = 'sql';\n",
+                                            "$rcmail_config['ldap_public'] = array();\n",
+                                            "$rcmail_config['autocomplete_addressbooks'] = array('sql');\n",
+                                            "$rcmail_config['autocomplete_min_length'] = 1;\n",
+                                            "$rcmail_config['autocomplete_threads'] = 0;\n",
+                                            "$rcmail_config['autocomplete_max'] = 15;\n",
+                                            "$rcmail_config['address_template'] = '{street}<br/>{locality} {zipcode}<br/>{country} {region}';\n",
+                                            "$rcmail_config['addressbook_search_mode'] = 0;\n",
+                                            "$rcmail_config['default_charset'] = 'UTF-8';\n",
+                                            "$rcmail_config['skin'] = 'larry';\n",
+                                            "$rcmail_config['mail_pagesize'] = 50;\n",
+                                            "$rcmail_config['addressbook_pagesize'] = 50;\n",
+                                            "$rcmail_config['addressbook_sort_col'] = 'surname';\n",
+                                            "$rcmail_config['addressbook_name_listing'] = 0;\n",
+                                            "$rcmail_config['timezone'] = 'auto';\n",
+                                            "$rcmail_config['prefer_html'] = true;\n",
+                                            "$rcmail_config['show_images'] = 0;\n",
+                                            "$rcmail_config['message_extwin'] = false;\n",
+                                            "$rcmail_config['compose_extwin'] = false;\n",
+                                            "$rcmail_config['htmleditor'] = 0;\n",
+                                            "$rcmail_config['prettydate'] = true;\n",
+                                            "$rcmail_config['draft_autosave'] = 300;\n",
+                                            "$rcmail_config['preview_pane'] = false;\n",
+                                            "$rcmail_config['preview_pane_mark_read'] = 0;\n",
+                                            "$rcmail_config['logout_purge'] = false;\n",
+                                            "$rcmail_config['logout_expunge'] = false;\n",
+                                            "$rcmail_config['inline_images'] = true;\n",
+                                            "$rcmail_config['mime_param_folding'] = 1;\n",
+                                            "$rcmail_config['skip_deleted'] = false;\n",
+                                            "$rcmail_config['read_when_deleted'] = true;\n",
+                                            "$rcmail_config['flag_for_deletion'] = false;\n",
+                                            "$rcmail_config['refresh_interval'] = 60;\n",
+                                            "$rcmail_config['check_all_folders'] = false;\n",
+                                            "$rcmail_config['display_next'] = true;\n",
+                                            "$rcmail_config['autoexpand_threads'] = 0;\n",
+                                            "$rcmail_config['reply_mode'] = 0;\n",
+                                            "$rcmail_config['strip_existing_sig'] = true;\n",
+                                            "$rcmail_config['show_sig'] = 1;\n",
+                                            "$rcmail_config['force_7bit'] = false;\n",
+                                            "$rcmail_config['search_mods'] = null;\n",
+                                            "$rcmail_config['addressbook_search_mods'] = null;\n",
+                                            "$rcmail_config['delete_always'] = false;\n",
+                                            "$rcmail_config['delete_junk'] = false;\n",
+                                            "$rcmail_config['mdn_requests'] = 0;\n",
+                                            "$rcmail_config['mdn_default'] = 0;\n",
+                                            "$rcmail_config['dsn_default'] = 0;\n",
+                                            "$rcmail_config['reply_same_folder'] = false;\n",
+                                            "$rcmail_config['forward_attachment'] = false;\n",
+                                            "$rcmail_config['default_addressbook'] = null;\n",
+                                            "$rcmail_config['spellcheck_before_send'] = false;\n",
+                                            "$rcmail_config['autocomplete_single'] = false;\n",
+                                            "$rcmail_config['default_font'] = 'Verdana';\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/roundcube/plugins/password/config.inc.php": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "<?php\n",
+                                            "$rcmail_config['password_driver'] = 'sql';\n",
+                                            "$rcmail_config['password_confirm_current'] = true;\n",
+                                            "$rcmail_config['password_minimum_length'] = 0;\n",
+                                            "$rcmail_config['password_require_nonalpha'] = false;\n",
+                                            "$rcmail_config['password_log'] = false;\n",
+                                            "$rcmail_config['password_login_exceptions'] = null;\n",
+                                            "$rcmail_config['password_hosts'] = null;\n",
+                                            "$rcmail_config['password_db_dsn'] = 'mysql://",
+                                            {
+                                                "Ref": "DBUser"
+                                            },
+                                            ":",
+                                            {
+                                                "Ref": "DBPassword"
+                                            },
+                                            "@localhost/",
+                                            {
+                                                "Ref": "DBName"
+                                            },
+                                            "';\n",
+                                            "$rcmail_config['password_query'] = 'SELECT update_passwd(%o, %c, %u)';\n",
+                                            "$rcmail_config['password_crypt_hash'] = 'md5';\n",
+                                            "$rcmail_config['password_idn_ascii'] = false;\n",
+                                            "$rcmail_config['password_dovecotpw_method'] = 'CRAM-MD5';\n",
+                                            "$rcmail_config['password_dovecotpw_with_method'] = false;\n",
+                                            "$rcmail_config['password_hash_algorithm'] = 'sha1';\n",
+                                            "$rcmail_config['password_hash_base64'] = false;\n",
+                                            "$rcmail_config['password_pop_host'] = 'localhost';\n",
+                                            "$rcmail_config['password_pop_port'] = 106;\n",
+                                            "$rcmail_config['password_saslpasswd_args'] = '';\n",
+                                            "$rcmail_config['password_ldap_host'] = 'localhost';\n",
+                                            "$rcmail_config['password_ldap_port'] = '389';\n",
+                                            "$rcmail_config['password_ldap_starttls'] = false;\n",
+                                            "$rcmail_config['password_ldap_version'] = '3';\n",
+                                            "$rcmail_config['password_ldap_basedn'] = 'dc=exemple,dc=com';\n",
+                                            "$rcmail_config['password_ldap_method'] = 'user';\n",
+                                            "$rcmail_config['password_ldap_adminDN'] = null;\n",
+                                            "$rcmail_config['password_ldap_adminPW'] = null;\n",
+                                            "$rcmail_config['password_ldap_userDN_mask'] = 'uid=%login,ou=people,dc=exemple,dc=com';\n",
+                                            "$rcmail_config['password_ldap_searchDN'] = 'cn=roundcube,ou=services,dc=example,dc=com';\n",
+                                            "$rcmail_config['password_ldap_searchPW'] = 'secret';\n",
+                                            "$rcmail_config['password_ldap_search_base'] = 'ou=people,dc=example,dc=com';\n",
+                                            "$rcmail_config['password_ldap_search_filter'] = '(uid=%login)';\n",
+                                            "$rcmail_config['password_ldap_encodage'] = 'crypt';\n",
+                                            "$rcmail_config['password_ldap_pwattr'] = 'userPassword';\n",
+                                            "$rcmail_config['password_ldap_force_replace'] = true;\n",
+                                            "$rcmail_config['password_ldap_lchattr'] = '';\n",
+                                            "$rcmail_config['password_ldap_samba_pwattr'] = '';\n",
+                                            "$rcmail_config['password_ldap_samba_lchattr'] = '';\n",
+                                            "$rcmail_config['password_directadmin_host'] = 'tcp://localhost';\n",
+                                            "$rcmail_config['password_directadmin_port'] = 2222;\n",
+                                            "$rcmail_config['password_vpopmaild_host'] = 'localhost';\n",
+                                            "$rcmail_config['password_vpopmaild_port'] = 89;\n",
+                                            "$rcmail_config['password_cpanel_host'] = 'host.domain.com';\n",
+                                            "$rcmail_config['password_cpanel_username'] = 'username';\n",
+                                            "$rcmail_config['password_cpanel_password'] = 'password';\n",
+                                            "$rcmail_config['password_cpanel_port'] = 2082;\n",
+                                            "$rcmail_config['password_cpanel_ssl'] = true;\n",
+                                            "$rcmail_config['password_cpanel_theme'] = 'x';\n",
+                                            "$rcmail_config['password_ximss_host'] = 'mail.example.com';\n",
+                                            "$rcmail_config['password_ximss_port'] = 11024;\n",
+                                            "$rcmail_config['password_chpasswd_cmd'] = 'sudo /usr/sbin/chpasswd 2> /dev/null';\n",
+                                            "$rcmail_config['xmail_host'] = 'localhost';\n",
+                                            "$rcmail_config['xmail_user'] = 'YourXmailControlUser';\n",
+                                            "$rcmail_config['xmail_pass'] = 'YourXmailControlPass';\n",
+                                            "$rcmail_config['xmail_port'] = 6017;\n",
+                                            "$rcmail_config['hmailserver_remote_dcom'] = false;\n",
+                                            "$rcmail_config['hmailserver_server'] = array(\n",
+                                            "    'Server' => 'localhost', // hostname or ip address\n",
+                                            "    'Username' => 'administrator', // windows username\n",
+                                            "    'Password' => 'password' // windows user password\n",
+                                            ");\n",
+                                            "$config['password_virtualmin_format'] = 0;\n",
+                                            "$rcmail_config['password_pw_usermod_cmd'] = 'sudo /usr/sbin/pw usermod -h 0 -n';\n",
+                                            "$rcmail_config['password_dbmail_args'] = '-p sha512';\n",
+                                            "$rcmail_config['password_expect_bin'] = '/usr/bin/expect';\n",
+                                            "$rcmail_config['password_expect_script'] = '';\n",
+                                            "$rcmail_config['password_expect_params'] = '';\n",
+                                            "$rcmail_config['password_smb_host'] = 'localhost';\n",
+                                            "$rcmail_config['password_smb_cmd'] = '/usr/bin/smbpasswd';\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "apache2": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true",
+                                    "files": [
+                                        "/etc/roundcube/apache.conf",
+                                        "/etc/roundcube/main.inc.php"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "dkim": {
+                        "packages": {
+                            "apt-get": {
+                                "opendkim": [],
+                                "opendkim-tools": []
+                            }
+                        },
+                        "files": {
+                            "/etc/opendkim.conf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "Syslog                  yes\n",
+                                            "UMask                   002\n",
+                                            "OversignHeaders         From\n",
+                                            "AutoRestart             Yes\n",
+                                            "AutoRestartRate         10/1h\n",
+                                            "UMask                   002\n",
+                                            "Syslog                  yes\n",
+                                            "SyslogSuccess           Yes\n",
+                                            "LogWhy                  Yes\n",
+                                            "Canonicalization        relaxed/simple\n",
+                                            "ExternalIgnoreList      refile:/etc/opendkim/TrustedHosts\n",
+                                            "InternalHosts           refile:/etc/opendkim/TrustedHosts\n",
+                                            "KeyTable                refile:/etc/opendkim/KeyTable\n",
+                                            "SigningTable            refile:/etc/opendkim/SigningTable\n",
+                                            "Mode                    sv\n",
+                                            "PidFile                 /var/run/opendkim/opendkim.pid\n",
+                                            "SignatureAlgorithm      rsa-sha256\n",
+                                            "UserID                  opendkim:opendkim\n",
+                                            "Socket                  inet:12301@localhost\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/default/opendkim": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "SOCKET=\"inet:12301@localhost\"\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/opendkim/TrustedHosts": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "127.0.0.1\n",
+                                            "localhost\n",
+                                            "172.16.0.0/12\n",
+                                            "*.",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/opendkim/KeyTable": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "mail._domainkey.",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            " ",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            ":mail:/etc/opendkim/keys/",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "/mail.private\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/opendkim/SigningTable": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "*@",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            " mail._domainkey.",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        },
+                        "commands": {
+                            "01_mkdir_opendkim": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "mkdir -p /etc/opendkim/keys/",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            }
+                                        ]
+                                    ]
+                                },
+                                "test": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "! test -e /etc/opendkim/keys/",
+                                            {
+                                              "Ref": "DNSDomain"
+                                            }
+                                        ]
+                                    ]
+                                }
+                            },
+                            "02_opendkim-genkey": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "opendkim-genkey -s mail -d ",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            }
+                                        ]
+                                    ]
+                                },
+                                "ignoreErrors": "true",
+                                "cwd": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "/etc/opendkim/keys/",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            }
+                                        ]
+                                    ]
+                                }
+                            },
+                            "03_chown_opendkim": {
+                                "command": "chown opendkim:opendkim mail.private",
+                                "ignoreErrors": "true",
+                                "cwd": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "/etc/opendkim/keys/",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            }
+                                        ]
+                                    ]
+                                }
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "opendkim": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true",
+                                    "files": [
+                                        "/etc/opendkim.conf",
+                                        "/etc/default/opendkim",
+                                        "/etc/opendkim/TrustedHosts",
+                                        "/etc/opendkim/KeyTable",
+                                        "/etc/opendkim/SigningTable"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "restore_backup": {
+                        "commands": {
+                            "download_from_s3": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "aws s3 sync s3://",
+                                            {
+                                                "Ref": "S3Bucket"
+                                            },
+                                            " /var/mail/virtual --sse --region ",
+                                            {
+                                                "Ref": "AWS::Region"
+                                            },
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "ignoreError": "true"
+                            }
+                        }
+                    }
+                }
+            },
             "Properties": {
                 "DisableApiTermination": "false",
                 "InstanceInitiatedShutdownBehavior": "stop",
-                "IAMInstanceProfile": {
+                "IamInstanceProfile": {
                     "Ref": "IAMInstanceProfile"
                 },
                 "ImageId": {
@@ -437,15 +2595,20 @@
                     "Ref": "KeyName"
                 },
                 "Monitoring": "false",
+                "SecurityGroups": [
+                    {
+                        "Ref": "SecurityGroup"
+                    }
+                ],
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value":  {
+                        "Value": {
                             "Fn::Join": [
                                 "",
                                 [
                                     {
-                                      "Ref": "Name"
+                                        "Ref": "Name"
                                     },
                                     ".",
                                     {
@@ -455,7 +2618,50 @@
                             ]
                         }
                     }
-                ]
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash -xe\n",
+                                "apt-get update\n",
+                                "apt-get -y install python-setuptools libffi-dev libssl-dev python-pip awscli\n",
+                                "pip install pyopenssl ndg-httpsclient pyasn1\n",
+                                "cd /tmp && mkdir aws-cfn-bootstrap-latest\n",
+                                "curl https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz | tar xz -C aws-cfn-bootstrap-latest --strip-components 1\n",
+                                "easy_install aws-cfn-bootstrap-latest\n",
+                                "cp -f aws-cfn-bootstrap-latest/init/ubuntu/cfn-hup /etc/init.d/ && chmod 0755 /etc/init.d/cfn-hup\n",
+                                "update-rc.d cfn-hup defaults\n",
+                                "service cfn-hup start\n",
+                                "rm -rf /tmp/aws-cfn-bootstrap-latest\n",
+                                "/usr/local/bin/cfn-init -v ",
+                                "         --stack ",
+                                {
+                                    "Ref": "AWS::StackId"
+                                },
+                                "         --resource EC2Instance ",
+                                "         --configsets full_install ",
+                                "         --region ",
+                                {
+                                    "Ref": "AWS::Region"
+                                },
+                                "\n",
+                                "/usr/local/bin/cfn-signal -e $? ",
+                                "         --stack ",
+                                {
+                                    "Ref": "AWS::StackId"
+                                },
+                                "         --resource EC2Instance ",
+                                "         --region ",
+                                {
+                                    "Ref": "AWS::Region"
+                                },
+                                "\n"
+                            ]
+                        ]
+                    }
+                }
             }
         },
         "EIPAssociation": {

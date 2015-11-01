@@ -20,17 +20,23 @@ function cleanup()
 echo "Started at $(date -u +%Y-%m-%dT%H:%M:%S%z)"
 trap cleanup EXIT
 
+echo " --> Uploading template to S3 Bucket"
+aws s3 cp cloudformation.json s3://$CF_BUCKET
+
 echo " --> Creating Cloudformation stack"
-    aws cloudformation $1-stack \
-      --stack-name $STACK_NAME \
-      --template-body file://cloudformation.json \
+# Creates a CloudFormation stack for the s3 bucket website
+aws cloudformation create-stack \
+      --stack-name $AWS_DEFAULT_PROFILE \
+      --template-url https://s3-eu-west-1.amazonaws.com/$CF_BUCKET/cloudformation.json \
       --capabilities CAPABILITY_IAM \
       --parameters \
-ParameterKey=SSHLocation,ParameterValue=$IPADDRESS \
+ParameterKey=SSHLocation,ParameterValue="$IPADDRESS/32" \
 ParameterKey=KeyName,ParameterValue=default \
 ParameterKey=Name,ParameterValue=$NAME \
-ParameterKey=DomainName,ParameterValue=$DNS_DOMAIN
- > /dev/null 2>&1
+ParameterKey=DNSDomain,ParameterValue=$DNS_DOMAIN
+ParameterKey=DBPassword,ParameterValue="$DBPASSWORD" \
+ParameterKey=DBRootPassword,ParameterValue="$DBROOTPASSWORD" \
+ParameterKey=DBUser,ParameterValue="$DBUSER" #> /dev/null 2>&1
 
 echo " --> Watching stack progress, please wait..."
 STACK_STATUS=CREATE_IN_PROGRESS
@@ -44,6 +50,7 @@ done
 
 MSG="Checking Website"
 echo " --> $MSG"
+sleep 61
 curl -s -k -L https://$NAME.$DNS_DOMAIN | grep "Roundcube Webmail" > /dev/null 2>&1
 if [ $? -ne 0 ]; then
   abort $MSG

@@ -1,0 +1,89 @@
+DROP USER mail@localhost;
+CREATE USER 'mail'@'localhost' IDENTIFIED BY 'ChangeMe';
+GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,CREATE ROUTINE,DROP,EXECUTE ON maildb.* TO 'mail'@'localhost';
+GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,CREATE ROUTINE,DROP,EXECUTE ON maildb.* TO 'mail'@'%';
+GRANT EXECUTE ON PROCEDURE maildb.update_passwd TO 'mail'@'localhost';
+GRANT EXECUTE ON PROCEDURE maildb.update_passwd TO 'mail'@'%';
+FLUSH PRIVILEGES;
+
+USE maildb;
+
+DELIMITER $$
+CREATE FUNCTION update_passwd (oldpass text, cryptpass text, user text) RETURNS text MODIFIES SQL DATA
+BEGIN
+  DECLARE currentsalt varchar(20);
+  DECLARE error text;
+  SET error = 'incorrect current password';
+  SELECT substring_index(substr(users.crypt,4),_latin1'$',1) INTO currentsalt FROM users WHERE id=user;
+  SELECT '' INTO error FROM users WHERE id=user AND crypt=ENCRYPT(oldpass,CONCAT('$1$',currentsalt));
+  UPDATE users SET crypt=cryptpass  WHERE id=user AND crypt=ENCRYPT(oldpass,CONCAT('$1$',currentsalt));
+  RETURN error;
+END
+$$
+
+CREATE TABLE IF NOT EXISTS `aliases` (
+  `pkid` smallint(3) NOT NULL auto_increment,
+  `mail` varchar(120) NOT NULL default '',
+  `destination` varchar(120) NOT NULL default '',
+  `enabled` tinyint(1) NOT NULL default '1',
+  PRIMARY KEY  (`pkid`), 
+  UNIQUE KEY `mail` (`mail`)
+);
+
+CREATE TABLE IF NOT EXISTS `domains` (
+  `pkid` smallint(6) NOT NULL auto_increment,
+  `domain` varchar(120) NOT NULL default '',
+  `transport` varchar(120) NOT NULL default 'virtual:',
+  `enabled` tinyint(1) NOT NULL default '1',
+  PRIMARY KEY (`pkid`), 
+  UNIQUE KEY `domain` (`domain`)
+);
+
+CREATE TABLE `domains` (
+  `pkid` smallint(6) NOT NULL auto_increment,
+  `domain` varchar(120) NOT NULL default '',
+  `transport` varchar(120) NOT NULL default 'virtual:',
+  `enabled` tinyint(1) NOT NULL default '1',
+  PRIMARY KEY  (`pkid`)
+);
+
+CREATE TABLE IF NOT EXISTS (
+  `users` (
+    `id` varchar(128) NOT NULL default '',
+    `name` varchar(128) NOT NULL default '',
+    `uid` smallint(5) unsigned NOT NULL default '5000',
+    `gid` smallint(5) unsigned NOT NULL default '5000',
+    `home` varchar(255) NOT NULL default '/var/spool/mail/virtual',
+    `maildir` varchar(255) NOT NULL default 'blah/',
+    `enabled` tinyint(1) NOT NULL default '1',
+    `change_password` tinyint(1) NOT NULL default '1',
+    `clear` varchar(128) NOT NULL default 'ChangeMe',
+    `crypt` varchar(128) NOT NULL default 'sdtrusfX0Jj66',
+    `quota` varchar(255) NOT NULL default '',
+    PRIMARY KEY  (`id`),
+    UNIQUE KEY `id` (`id`)
+  )
+);
+
+INSERT INTO domains (domain) VALUES 
+('localhost'), 
+('localhost.localdomain'), 
+('domain.tld');
+
+INSERT INTO aliases (mail,destination) VALUES 
+('postmaster@localhost','root@localhost'), 
+('sysadmin@localhost','root@localhost'), 
+('webmaster@localhost','root@localhost'), 
+('abuse@localhost','root@localhost'), 
+('@localhost','root@localhost'), 
+('@localhost.localdomain','@localhost'), 
+('root@localhost','name@domain.tld');
+
+INSERT INTO users (id,name,maildir,crypt) VALUES (
+  'david@reay.email',
+  'david',
+  'david@reay.email/',
+  encrypt('ChangeMe', 
+    CONCAT('$1$', MD5(RAND()))
+  ) 
+);

@@ -5,20 +5,37 @@ if [ $# -eq 0 ]; then
   exit 1
 else
   if [ "$1" != "delete" ]; then
+    
+    # We need a unique "stackname" for CloudFormation,
+    # however CF doesn't accept periods in stack-names
+    STACK_NAME=mail-`echo $4 | sed -e 's/\./\-/g'`
+
+    # Configures the aws-cli - requires an access key id and secret
+    # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
+    export AWS_DEFAULT_PROFILE=david-reay-email
+    aws configure --profile $AWS_DEFAULT_PROFILE
+
     # Sets your external IP for the SSHLocation
     #IPADDRESS=`wget -qO- http://ipecho.net/plain ; echo -n`
     IPADDRESS=`curl -s http://whatismijnip.nl | cut -d " " -f 5`
 
+    # Copy the cloudformation template to an S3 bucket
+    # Due to its size this template must be provided this way
+    aws s3 cp cloudformation.json s3://$CF_BUCKET
+
     # Creates a CloudFormation stack for the s3 bucket website
     aws cloudformation $1-stack \
       --stack-name $AWS_DEFAULT_PROFILE \
-      --template-body file://cloudformation.json \
+      --template-url https://s3-eu-west-1.amazonaws.com/$CF_BUCKET/cloudformation.json \
       --capabilities CAPABILITY_IAM \
       --parameters \
-ParameterKey=SSHLocation,ParameterValue=$IPADDRESS \
+ParameterKey=SSHLocation,ParameterValue="$IPADDRESS/32" \
 ParameterKey=KeyName,ParameterValue=$2 \
 ParameterKey=Name,ParameterValue=$3 \
-ParameterKey=DomainName,ParameterValue=$4
+ParameterKey=DNSDomain,ParameterValue=$4 \
+ParameterKey=DBPassword,ParameterValue="$DBPASSWORD" \
+ParameterKey=DBRootPassword,ParameterValue="$DBROOTPASSWORD" \
+ParameterKey=DBUser,ParameterValue="$DBUSER"
   else
     aws cloudformtation delete-stack --stack-name $AWS_DEFAULT_PROFILE
   fi
