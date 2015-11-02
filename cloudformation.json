@@ -253,8 +253,8 @@
                 "HVMG2": "ami-37827a73"
             },
             "eu-west-1": {
-                "PV64": "ami-d6d18ea1",
-                "HVM64": "ami-e4d18e93",
+                "PV64": "ami-5da23a2a",
+                "HVM64": "ami-47a23a30",
                 "HVMG2": "ami-72a9f105"
             },
             "eu-central-1": {
@@ -518,44 +518,6 @@
                                 "",
                                 [
                                     "mail.",
-                                    {
-                                        "Ref": "DNSDomain"
-                                    },
-                                    "."
-                                ]
-                            ]
-                        },
-                        "Type": "A",
-                        "TTL": "300",
-                        "ResourceRecords": [
-                            {
-                                "Ref": "EIP"
-                            }
-                        ]
-                    }
-                ]
-            }
-        },
-        "ARootRecordSetGroup": {
-            "Type": "AWS::Route53::RecordSetGroup",
-            "Properties": {
-                "HostedZoneName": {
-                    "Fn::Join": [
-                        "",
-                        [
-                            {
-                                "Ref": "DNSDomain"
-                            },
-                            "."
-                        ]
-                    ]
-                },
-                "RecordSets": [
-                    {
-                        "Name": {
-                            "Fn::Join": [
-                                "",
-                                [
                                     {
                                         "Ref": "DNSDomain"
                                     },
@@ -884,7 +846,7 @@
                     },
                     "mysql": {
                         "packages": {
-                            "apt-get": {
+                            "apt": {
                                 "mysql-client": [],
                                 "mysql-server": []
                             }
@@ -895,7 +857,7 @@
                                     "Fn::Join": [
                                         "",
                                         [
-                                            "DROP USER mail@localhost;\n",
+                                            "CREATE DATABASE maildb;\n",
                                             "CREATE USER '",
                                             {
                                                 "Ref": "DBUser"
@@ -954,8 +916,8 @@
                                             "  DECLARE error text;\n",
                                             "  SET error = 'incorrect current password';\n",
                                             "  SELECT substring_index(substr(users.crypt,4),_latin1'$',1) INTO currentsalt FROM users WHERE id=user;\n",
-                                            "  SELECT '' INTO error FROM users WHERE id=user AND crypt=ENCRYPT(oldpass,CONCAT('$1$',currentsalt));\n",
-                                            "  UPDATE users SET crypt=cryptpass  WHERE id=user AND crypt=ENCRYPT(oldpass,CONCAT('$1$',currentsalt));\n",
+                                            "  SELECT '' INTO error FROM users WHERE id=user AND crypt=ENCRYPT(oldpass,CONCAT('$5$',currentsalt));\n",
+                                            "  UPDATE users SET crypt=cryptpass  WHERE id=user AND crypt=ENCRYPT(oldpass,CONCAT('$5$',currentsalt));\n",
                                             "  RETURN error;\n",
                                             "END\n",
                                             "$$\n",
@@ -1009,7 +971,7 @@
                                             {
                                                 "Ref": "DNSDomain"
                                             },
-                                            "/',encrypt('ChangeMe', CONCAT('$1$', MD5(RAND()))) );\n",
+                                            "/',encrypt('ChangeMe', CONCAT('$5$', MD5(RAND()))) );\n",
                                             "\n"
                                         ]
                                     ]
@@ -1150,7 +1112,7 @@
                     },
                     "postfix": {
                         "packages": {
-                            "apt-get": {
+                            "apt": {
                                 "postfix": [],
                                 "postfix-mysql": []
                             }
@@ -1493,7 +1455,7 @@
                     },
                     "imap": {
                         "packages": {
-                            "apt-get": {
+                            "apt": {
                                 "courier-base": [],
                                 "courier-authdaemon": [],
                                 "courier-authlib-mysql": [],
@@ -1669,7 +1631,7 @@
                     },
                     "amavis": {
                         "packages": {
-                            "apt-get": {
+                            "apt": {
                                 "amavisd-new": []
                             }
                         },
@@ -1717,7 +1679,7 @@
                     },
                     "spamassassin": {
                         "packages": {
-                            "apt-get": {
+                            "apt": {
                                 "spamassassin": [],
                                 "spamc": []
                             }
@@ -1773,7 +1735,7 @@
                     },
                     "antivirus": {
                         "packages": {
-                            "apt-get": {
+                            "apt": {
                                 "clamav": [],
                                 "clamav-base": [],
                                 "libclamav6": [],
@@ -1802,7 +1764,7 @@
                     },
                     "postgrey": {
                         "packages": {
-                            "apt-get": {
+                            "apt": {
                                 "postgrey": []
                             }
                         },
@@ -1817,7 +1779,7 @@
                     },
                     "saslauthd": {
                         "packages": {
-                            "apt-get": {
+                            "apt": {
                                 "libsasl2-modules": [],
                                 "libsasl2-modules-sql": [],
                                 "libgsasl7": [],
@@ -1912,7 +1874,7 @@
                     },
                     "roundcube": {
                         "packages": {
-                            "apt-get": {
+                            "apt": {
                                 "roundcube": [],
                                 "roundcube-mysql": [],
                                 "roundcube-plugins": []
@@ -1925,6 +1887,10 @@
                             },
                             "a2ensite_default-ssl": {
                                 "command": "/usr/sbin/a2ensite default-ssl.conf",
+                                "ignoreErrors": "true"
+                            },
+                            "a2enmod_ssl": {
+                                "command": "/usr/sbin/a2enmod ssl",
                                 "ignoreErrors": "true"
                             }
                         },
@@ -2350,7 +2316,7 @@
                     },
                     "dkim": {
                         "packages": {
-                            "apt-get": {
+                            "apt": {
                                 "opendkim": [],
                                 "opendkim-tools": []
                             }
@@ -2488,7 +2454,7 @@
                                         [
                                             "! test -e /etc/opendkim/keys/",
                                             {
-                                              "Ref": "DNSDomain"
+                                                "Ref": "DNSDomain"
                                             }
                                         ]
                                     ]
@@ -2583,7 +2549,21 @@
                     "Ref": "IAMInstanceProfile"
                 },
                 "ImageId": {
-                    "Ref": "ImageId"
+                    "Fn::FindInMap": [
+                        "AWSRegionArch2AMI",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        {
+                            "Fn::FindInMap": [
+                                "AWSInstanceType2Arch",
+                                {
+                                    "Ref": "InstanceType"
+                                },
+                                "Arch"
+                            ]
+                        }
+                    ]
                 },
                 "InstanceType": {
                     "Ref": "InstanceType"
@@ -2604,10 +2584,7 @@
                             "Fn::Join": [
                                 "",
                                 [
-                                    {
-                                        "Ref": "Name"
-                                    },
-                                    ".",
+                                    "mail.",
                                     {
                                         "Ref": "DNSDomain"
                                     }

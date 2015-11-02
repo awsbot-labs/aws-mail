@@ -1,4 +1,4 @@
-DROP USER mail@localhost;
+CREATE DATABASE maildb;
 CREATE USER 'mail'@'localhost' IDENTIFIED BY 'ChangeMe';
 GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,CREATE ROUTINE,DROP,EXECUTE ON maildb.* TO 'mail'@'localhost';
 GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,CREATE ROUTINE,DROP,EXECUTE ON maildb.* TO 'mail'@'%';
@@ -80,9 +80,9 @@ INSERT INTO aliases (mail,destination) VALUES
 ('root@localhost','name@domain.tld');
 
 INSERT INTO users (id,name,maildir,crypt) VALUES (
-  'david@reay.email',
-  'david',
-  'david@reay.email/',
+  'name@domain.tld',
+  'name',
+  'name@domain.tld/',
   encrypt('ChangeMe', 
     CONCAT('$1$', MD5(RAND()))
   ) 

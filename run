@@ -12,7 +12,7 @@ else
 
     # Configures the aws-cli - requires an access key id and secret
     # http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
-    export AWS_DEFAULT_PROFILE=david-reay-email
+    export AWS_DEFAULT_PROFILE=$STACK_NAME
     aws configure --profile $AWS_DEFAULT_PROFILE
 
     # Sets your external IP for the SSHLocation
