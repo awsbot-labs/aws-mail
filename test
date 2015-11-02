@@ -21,7 +21,7 @@ echo "Started at $(date -u +%Y-%m-%dT%H:%M:%S%z)"
 trap cleanup EXIT
 
 echo " --> Uploading template to S3 Bucket"
-aws s3 cp cloudformation.json s3://$CF_BUCKET
+aws s3 cp cloudformation.json s3://$CF_BUCKET > /dev/null 2>&1
 
 echo " --> Creating Cloudformation stack"
 # Creates a CloudFormation stack for the s3 bucket website
@@ -33,10 +33,10 @@ aws cloudformation create-stack \
 ParameterKey=SSHLocation,ParameterValue="$IPADDRESS/32" \
 ParameterKey=KeyName,ParameterValue=default \
 ParameterKey=Name,ParameterValue=$NAME \
-ParameterKey=DNSDomain,ParameterValue=$DNS_DOMAIN
-ParameterKey=DBPassword,ParameterValue="$DBPASSWORD" \
-ParameterKey=DBRootPassword,ParameterValue="$DBROOTPASSWORD" \
-ParameterKey=DBUser,ParameterValue="$DBUSER" #> /dev/null 2>&1
+ParameterKey=DNSDomain,ParameterValue=$DNS_DOMAIN \
+ParameterKey=DBPassword,ParameterValue=$DBPASSWORD \
+ParameterKey=DBRootPassword,ParameterValue=$DBROOTPASSWORD \
+ParameterKey=DBUser,ParameterValue=$DBUSER > /dev/null 2>&1
 
 echo " --> Watching stack progress, please wait..."
 STACK_STATUS=CREATE_IN_PROGRESS
@@ -44,6 +44,8 @@ while [ "$STACK_STATUS" == "CREATE_IN_PROGRESS" ]; do
   STACK_STATUS=`aws cloudformation describe-stacks --stack-name $STACK_NAME --query Stacks[*].StackStatus --output text`
   if [[ ( "$STACK_STATUS" == "CREATE_COMPLETE" ) || ( "$STACK_STATUS" == "DELETE_COMPLETE" ) || ( "$STACK_STATUS" == "DELETE_FAILED" ) ]]; then
     break
+  elif [[ ("$STACK_STATUS" == "CREATE_FAILED") ]]
+    exit 1
   fi
   sleep 3
 done

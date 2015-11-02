@@ -517,10 +517,7 @@
                             "Fn::Join": [
                                 "",
                                 [
-                                    {
-                                        "Ref": "Name"
-                                    },
-                                    ".",
+                                    "mail.",
                                     {
                                         "Ref": "DNSDomain"
                                     },
