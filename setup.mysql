@@ -15,8 +15,8 @@ BEGIN
   DECLARE error text;
   SET error = 'incorrect current password';
   SELECT substring_index(substr(users.crypt,4),_latin1'$',1) INTO currentsalt FROM users WHERE id=user;
-  SELECT '' INTO error FROM users WHERE id=user AND crypt=ENCRYPT(oldpass,CONCAT('$1$',currentsalt));
-  UPDATE users SET crypt=cryptpass  WHERE id=user AND crypt=ENCRYPT(oldpass,CONCAT('$1$',currentsalt));
+  SELECT '' INTO error FROM users WHERE id=user AND crypt=ENCRYPT(oldpass,CONCAT('$5$',currentsalt));
+  UPDATE users SET crypt=cryptpass  WHERE id=user AND crypt=ENCRYPT(oldpass,CONCAT('$5$',currentsalt));
   RETURN error;
 END
 $$
@@ -84,6 +84,6 @@ INSERT INTO users (id,name,maildir,crypt) VALUES (
   'name',
   'name@domain.tld/',
   encrypt('ChangeMe', 
-    CONCAT('$1$', MD5(RAND()))
+    CONCAT('$5$', MD5(RAND()))
   ) 
 );

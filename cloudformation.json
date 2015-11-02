@@ -738,7 +738,7 @@
             "Metadata": {
                 "AWS::CloudFormation::Init": {
                     "configSets": {
-                        "full_install": [
+                        "install": [
                             "cfn-bootstrap",
                             "cron",
                             "mysql",
@@ -751,6 +751,24 @@
                             "saslauthd",
                             "roundcube",
                             "dkim",
+                            "welcome_message",
+                            "hostname",
+                            "reboot"
+                        ],
+                        "config": [
+                            "cfn-bootstrap",
+                            "cron",
+                            "mysql",
+                            "postfix",
+                            "imap",
+                            "amavis",
+                            "spamassassin",
+                            "antivirus",
+                            "postgrey",
+                            "saslauthd",
+                            "roundcube",
+                            "dkim",
+                            "hostname",
                             "restore_backup"
                         ]
                     },
@@ -794,7 +812,7 @@
                                                 "Ref": "AWS::StackName"
                                             },
                                             "         --resource EC2Instance ",
-                                            "         --configsets full_install ",
+                                            "         --configsets config ",
                                             "         --region ",
                                             {
                                                 "Ref": "AWS::Region"
@@ -976,7 +994,7 @@
                                         ]
                                     ]
                                 },
-                                "mode": "000400",
+                                "mode": "000644",
                                 "owner": "root",
                                 "group": "root"
                             },
@@ -1034,65 +1052,8 @@
                             }
                         },
                         "commands": {
-                            "01_set_mysql_root_password": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "mysqladmin -u root password '",
-                                            {
-                                                "Ref": "DBRootPassword"
-                                            },
-                                            "'"
-                                        ]
-                                    ]
-                                },
-                                "test": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "$(mysql ",
-                                            {
-                                                "Ref": "DBName"
-                                            },
-                                            " -u root --password='",
-                                            {
-                                                "Ref": "DBRootPassword"
-                                            },
-                                            "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"
-                                        ]
-                                    ]
-                                }
-                            },
                             "02_create_database": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "mysql -u root --password='",
-                                            {
-                                                "Ref": "DBRootPassword"
-                                            },
-                                            "' < /tmp/setup.mysql"
-                                        ]
-                                    ]
-                                },
-                                "test": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "$(mysql ",
-                                            {
-                                                "Ref": "DBName"
-                                            },
-                                            " -u root --password='",
-                                            {
-                                                "Ref": "DBRootPassword"
-                                            },
-                                            "' >/dev/null 2>&1 </dev/null); (( $? != 0 ))"
-                                        ]
-                                    ]
-                                }
+                                "command": "mysql -u root < /tmp/setup.mysql"
                             },
                             "03_cleanup": {
                                 "command": "#rm /tmp/setup.mysql"
@@ -1123,10 +1084,7 @@
                                     "Fn::Join": [
                                         "",
                                         [
-                                            {
-                                                "Ref": "Name"
-                                            },
-                                            ".",
+                                            "mail.",
                                             {
                                                 "Ref": "DNSDomain"
                                             }
@@ -1366,7 +1324,7 @@
                                 "owner": "root",
                                 "group": "root"
                             },
-                            "/etc/postfix/mysql_domain.cf": {
+                            "/etc/postfix/mysql_domains.cf": {
                                 "content": {
                                     "Fn::Join": [
                                         "",
@@ -1434,6 +1392,24 @@
                                 "mode": "000644",
                                 "owner": "root",
                                 "group": "root"
+                            }
+                        },
+                        "commands": {
+                            "01_mkdir_var_spool_mail_virtual": {
+                                "command": "mkdir -p /var/spool/mail/virtual",
+                                "ignoreErrors": "true"
+                            },
+                            "02_groupadd_virtual": {
+                                "command": "groupadd --system virtual -g 5000",
+                                "ignoreErrors": "true"
+                            },
+                            "03_useradd_virtual": {
+                                "command": "useradd --system virtual -u 5000 -g 5000",
+                                "ignoreErrors": "true"
+                            },
+                            "04_chown_var_spool_mail_virtual": {
+                                "command": "chown -R virtual:virtual /var/spool/mail/virtual",
+                                "ignoreErrors": "true"
                             }
                         },
                         "services": {
@@ -2539,6 +2515,121 @@
                                 "ignoreError": "true"
                             }
                         }
+                    },
+                    "reboot": {
+                        "commands": {
+                            "reboot": {
+                                "command": "reboot"
+                            }
+                        }
+                    },
+                    "hostname": {
+                        "commands": {
+                            "hostname": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "hostname mail.",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            }
+                                        ]
+                                    ]
+                                }
+                            }
+                        },
+                        "files": {
+                            "etc_hosts": {
+                                "contents": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "127.0.0.1 localhost.localdomain localhost\n",
+                                            "127.0.0.1 mail.",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            " mail\n",
+                                            "::1 ip6-localhost ip6-loopback\n",
+                                            "fe00::0 ip6-localnet\n",
+                                            "ff00::0 ip6-mcastprefix\n",
+                                            "ff02::1 ip6-allnodes\n",
+                                            "ff02::2 ip6-allrouters\n",
+                                            "ff02::3 ip6-allhosts\n"
+                                        ]
+                                    ]
+                                }
+                            },
+                            "etc_hostname": {
+                                "contents": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "mail.",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "\n"
+                                        ]
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "welcome_message": {
+                        "packages": {
+                            "apt": {
+                                "mailutils": []
+                            }
+                        },
+                        "commands": {
+                            "hostname": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "hostname mail.",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            }
+                                        ]
+                                    ]
+                                }
+                            },
+                            "send_mail": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "TIME=`date +%s`\n",
+                                            "touch /etc/welcome_message\n",
+                                            "cat << EOF > /etc/welcome_message | mail -s \"Hello again\" ",
+                                            {
+                                                "Ref": "Name"
+                                            },
+                                            "@",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "\n",
+                                            "Hello,\n",
+                                            "\n",
+                                            "You sent this email at ${TIME}s, when you created this.\n",
+                                            "\n",
+                                            "It's good to see you again.\n",
+                                            "\n",
+                                            "Hugs,\n",
+                                            "\n",
+                                            "Yourformerself\n",
+                                            "\n",
+                                            "EOF\n"
+                                        ]
+                                    ]
+                                },
+                                "test": "! test -e /etc/welcome_message"
+                            }
+                        }
                     }
                 }
             },
@@ -2615,7 +2706,7 @@
                                     "Ref": "AWS::StackId"
                                 },
                                 "         --resource EC2Instance ",
-                                "         --configsets full_install ",
+                                "         --configsets install ",
                                 "         --region ",
                                 {
                                     "Ref": "AWS::Region"
