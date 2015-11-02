@@ -44,7 +44,7 @@ while [ "$STACK_STATUS" == "CREATE_IN_PROGRESS" ]; do
   STACK_STATUS=`aws cloudformation describe-stacks --stack-name $STACK_NAME --query Stacks[*].StackStatus --output text`
   if [[ ( "$STACK_STATUS" == "CREATE_COMPLETE" ) || ( "$STACK_STATUS" == "DELETE_COMPLETE" ) || ( "$STACK_STATUS" == "DELETE_FAILED" ) ]]; then
     break
-  elif [[ ("$STACK_STATUS" == "CREATE_FAILED") ]]
+  elif [[ ("$STACK_STATUS" == "CREATE_FAILED") ]]; then
     exit 1
   fi
   sleep 3
