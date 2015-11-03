@@ -4,8 +4,6 @@ if [ $# -eq 0 ]; then
   echo "e.g. $0 create|update|delete mail john doe.email"
   exit 1
 else
-  if [ "$1" != "delete" ]; then
-    
     # We need a unique "stackname" for CloudFormation,
     # however CF doesn't accept periods in stack-names
     STACK_NAME=mail-`echo $4 | sed -e 's/\./\-/g'`
@@ -19,6 +17,7 @@ else
     #IPADDRESS=`wget -qO- http://ipecho.net/plain ; echo -n`
     IPADDRESS=`curl -s http://whatismijnip.nl | cut -d " " -f 5`
 
+  if [ "$1" != "delete" ]; then
     # Copy the cloudformation template to an S3 bucket
     # Due to its size this template must be provided this way
     aws s3 cp cloudformation.json s3://$CF_BUCKET
@@ -37,6 +36,6 @@ ParameterKey=DBPassword,ParameterValue="$DBPASSWORD" \
 ParameterKey=DBRootPassword,ParameterValue="$DBROOTPASSWORD" \
 ParameterKey=DBUser,ParameterValue="$DBUSER"
   else
-    aws cloudformtation delete-stack --stack-name $AWS_DEFAULT_PROFILE
+    aws cloudformation delete-stack --stack-name $AWS_DEFAULT_PROFILE
   fi
 fi

@@ -742,6 +742,7 @@
                             "cfn-bootstrap",
                             "cron",
                             "mysql",
+                            "data",
                             "postfix",
                             "imap",
                             "amavis",
@@ -751,8 +752,8 @@
                             "saslauthd",
                             "roundcube",
                             "dkim",
-                            "welcome_message",
                             "hostname",
+                            "welcome_message",
                             "reboot"
                         ],
                         "config": [
@@ -869,6 +870,73 @@
                                 "mysql-server": []
                             }
                         },
+                        "files": {
+                            "/etc/mysql/my.cnf": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "# This file is managed via CloudFormation\n",
+                                            "# Any manual changes will be lost\n",
+                                            "[client]\n",
+                                            "port = 3306\n",
+                                            "socket = /var/run/mysqld/mysqld.sock\n",
+                                            "[mysqld_safe]\n",
+                                            "socket = /var/run/mysqld/mysqld.sock\n",
+                                            "nice = 0\n",
+                                            "[mysqld]\n",
+                                            "user = mysql\n",
+                                            "pid-file = /var/run/mysqld/mysqld.pid\n",
+                                            "socket = /var/run/mysqld/mysqld.sock\n",
+                                            "port = 3306\n",
+                                            "basedir = /usr\n",
+                                            "datadir = /var/lib/mysql\n",
+                                            "tmpdir = /tmp\n",
+                                            "lc-messages-dir = /usr/share/mysql\n",
+                                            "skip-external-locking\n",
+                                            "bind-address = 127.0.0.1\n",
+                                            "key_buffer = 16M\n",
+                                            "max_allowed_packet = 16M\n",
+                                            "thread_stack = 192K\n",
+                                            "thread_cache_size = 8\n",
+                                            "myisam-recover = BACKUP\n",
+                                            "query_cache_limit = 1M\n",
+                                            "query_cache_size = 16M\n",
+                                            "general_log_file = /var/log/mysql/mysql.log\n",
+                                            "general_log = 1\n",
+                                            "log_error = /var/log/mysql/error.log\n",
+                                            "expire_logs_days = 10\n",
+                                            "max_binlog_size = 100M\n",
+                                            "[mysqldump]\n",
+                                            "quick\n",
+                                            "quote-names\n",
+                                            "max_allowed_packet = 16M\n",
+                                            "[mysql]\n",
+                                            "[isamchk]\n",
+                                            "key_buffer = 16M\n",
+                                            "!includedir /etc/mysql/conf.d/\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "mysql": {
+                                    "enabled": "true",
+                                    "ensureRunning": "true",
+                                    "files": [
+                                        "/etc/mysql/my.cnf"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "data": {
                         "files": {
                             "/tmp/setup.mysql": {
                                 "content": {
@@ -997,77 +1065,11 @@
                                 "mode": "000644",
                                 "owner": "root",
                                 "group": "root"
-                            },
-                            "/etc/mysql/my.cnf": {
-                                "content": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "# This file is managed via CloudFormation\n",
-                                            "# Any manual changes will be lost\n",
-                                            "[client]\n",
-                                            "port = 3306\n",
-                                            "socket = /var/run/mysqld/mysqld.sock\n",
-                                            "[mysqld_safe]\n",
-                                            "socket = /var/run/mysqld/mysqld.sock\n",
-                                            "nice = 0\n",
-                                            "[mysqld]\n",
-                                            "user = mysql\n",
-                                            "pid-file = /var/run/mysqld/mysqld.pid\n",
-                                            "socket = /var/run/mysqld/mysqld.sock\n",
-                                            "port = 3306\n",
-                                            "basedir = /usr\n",
-                                            "datadir = /var/lib/mysql\n",
-                                            "tmpdir = /tmp\n",
-                                            "lc-messages-dir = /usr/share/mysql\n",
-                                            "skip-external-locking\n",
-                                            "bind-address = 127.0.0.1\n",
-                                            "key_buffer = 16M\n",
-                                            "max_allowed_packet = 16M\n",
-                                            "thread_stack = 192K\n",
-                                            "thread_cache_size = 8\n",
-                                            "myisam-recover = BACKUP\n",
-                                            "query_cache_limit = 1M\n",
-                                            "query_cache_size = 16M\n",
-                                            "general_log_file = /var/log/mysql/mysql.log\n",
-                                            "general_log = 1\n",
-                                            "log_error = /var/log/mysql/error.log\n",
-                                            "expire_logs_days = 10\n",
-                                            "max_binlog_size = 100M\n",
-                                            "[mysqldump]\n",
-                                            "quick\n",
-                                            "quote-names\n",
-                                            "max_allowed_packet = 16M\n",
-                                            "[mysql]\n",
-                                            "[isamchk]\n",
-                                            "key_buffer = 16M\n",
-                                            "!includedir /etc/mysql/conf.d/\n",
-                                            "\n"
-                                        ]
-                                    ]
-                                },
-                                "mode": "000644",
-                                "owner": "root",
-                                "group": "root"
                             }
                         },
                         "commands": {
-                            "02_create_database": {
+                            "create_database": {
                                 "command": "mysql -u root < /tmp/setup.mysql"
-                            },
-                            "03_cleanup": {
-                                "command": "#rm /tmp/setup.mysql"
-                            }
-                        },
-                        "services": {
-                            "sysvinit": {
-                                "mysql": {
-                                    "enabled": "true",
-                                    "ensureRunning": "true",
-                                    "files": [
-                                        "/etc/mysql/my.cnf"
-                                    ]
-                                }
                             }
                         }
                     },
@@ -2539,9 +2541,9 @@
                                 }
                             }
                         },
-                        "files": {
-                            "etc_hosts": {
-                                "contents": {
+                        "files":{
+                            "/etc/hosts": {
+                                "content": {
                                     "Fn::Join": [
                                         "",
                                         [
@@ -2559,21 +2561,28 @@
                                             "ff02::3 ip6-allhosts\n"
                                         ]
                                     ]
-                                }
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                                
                             },
-                            "etc_hostname": {
-                                "contents": {
+                            "/etc/hostname": {
+                                "content": {
                                     "Fn::Join": [
                                         "",
                                         [
-                                            "mail.",
+                                           "mail.",
                                             {
                                                 "Ref": "DNSDomain"
                                             },
                                             "\n"
                                         ]
                                     ]
-                                }
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
                             }
                         }
                     },
@@ -2604,15 +2613,7 @@
                                         [
                                             "TIME=`date +%s`\n",
                                             "touch /etc/welcome_message\n",
-                                            "cat << EOF > /etc/welcome_message | mail -s \"Hello again\" ",
-                                            {
-                                                "Ref": "Name"
-                                            },
-                                            "@",
-                                            {
-                                                "Ref": "DNSDomain"
-                                            },
-                                            "\n",
+                                            "cat << EOF > /etc/welcome_message\n",
                                             "Hello,\n",
                                             "\n",
                                             "You sent this email at ${TIME}s, when you created this.\n",
@@ -2623,7 +2624,16 @@
                                             "\n",
                                             "Yourformerself\n",
                                             "\n",
-                                            "EOF\n"
+                                            "EOF\n",
+                                            "cat /etc/welcome_message | mail -s \"Hello again\" ",
+                                            {
+                                                "Ref": "Name"
+                                            },
+                                            "@",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "\n"
                                         ]
                                     ]
                                 },
@@ -2632,6 +2642,12 @@
                         }
                     }
                 }
+            },
+            "CreationPolicy" : {
+              "ResourceSignal" : {
+                "Count" : "1",
+                "Timeout" : "PT60M"
+              }
             },
             "Properties": {
                 "DisableApiTermination": "false",
