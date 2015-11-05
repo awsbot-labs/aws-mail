@@ -2545,7 +2545,7 @@
                                 }
                             }
                         },
-                        "files":{
+                        "files": {
                             "/etc/hosts": {
                                 "content": {
                                     "Fn::Join": [
@@ -2569,14 +2569,13 @@
                                 "mode": "000644",
                                 "owner": "root",
                                 "group": "root"
-                                
                             },
                             "/etc/hostname": {
                                 "content": {
                                     "Fn::Join": [
                                         "",
                                         [
-                                           "mail.",
+                                            "mail.",
                                             {
                                                 "Ref": "DNSDomain"
                                             },
@@ -2646,22 +2645,22 @@
                         },
                         "files": {
                             "/etc/update-motd.d/00-header": {
-                              "content": {
-                                  "Fn::Join": [
-                                      "",
-                                      [
-                                          "#!/bin/sh\n",
-                                          "# This file is managed by CloudFormation\n",
-                                          "figlet email\n",
-                                          "\n",
-                                          "[ -r /etc/lsb-release ] && . /etc/lsb-release\n",
-                                          "if [ -z \"$DISTRIB_DESCRIPTION\" ] && [ -x /usr/bin/lsb_release ]; then\n",
-                                          "  # Fall back to using the very slow lsb_release utility\n",
-                                          "  DISTRIB_DESCRIPTION=$(lsb_release -s -d)\n",
-                                          "fi\n",
-                                          "printf \"Welcome to %s (%s %s %s)\\n\" \"$DISTRIB_DESCRIPTION\" \"$(uname -o)\" \"$(uname -r)\" \"$(uname -m)\"\n"
-                                      ]
-                                  ]
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "#!/bin/sh\n",
+                                            "# This file is managed by CloudFormation\n",
+                                            "figlet email\n",
+                                            "\n",
+                                            "[ -r /etc/lsb-release ] && . /etc/lsb-release\n",
+                                            "if [ -z \"$DISTRIB_DESCRIPTION\" ] && [ -x /usr/bin/lsb_release ]; then\n",
+                                            "  # Fall back to using the very slow lsb_release utility\n",
+                                            "  DISTRIB_DESCRIPTION=$(lsb_release -s -d)\n",
+                                            "fi\n",
+                                            "printf \"Welcome to %s (%s %s %s)\\n\" \"$DISTRIB_DESCRIPTION\" \"$(uname -o)\" \"$(uname -r)\" \"$(uname -m)\"\n"
+                                        ]
+                                    ]
                                 },
                                 "mode": "000755",
                                 "owner": "root",
@@ -2685,11 +2684,11 @@
                     }
                 }
             },
-            "CreationPolicy" : {
-              "ResourceSignal" : {
-                "Count" : "1",
-                "Timeout" : "PT60M"
-              }
+            "CreationPolicy": {
+                "ResourceSignal": {
+                    "Count": "1",
+                    "Timeout": "PT60M"
+                }
             },
             "Properties": {
                 "DisableApiTermination": "false",
