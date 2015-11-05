@@ -468,7 +468,6 @@
                             "Fn::Join": [
                                 "",
                                 [
-                                    "mx.",
                                     {
                                         "Ref": "DNSDomain"
                                     },
@@ -518,45 +517,6 @@
                                 "",
                                 [
                                     "mail.",
-                                    {
-                                        "Ref": "DNSDomain"
-                                    },
-                                    "."
-                                ]
-                            ]
-                        },
-                        "Type": "A",
-                        "TTL": "300",
-                        "ResourceRecords": [
-                            {
-                                "Ref": "EIP"
-                            }
-                        ]
-                    }
-                ]
-            }
-        },
-        "AWildcardRecordSetGroup": {
-            "Type": "AWS::Route53::RecordSetGroup",
-            "Properties": {
-                "HostedZoneName": {
-                    "Fn::Join": [
-                        "",
-                        [
-                            {
-                                "Ref": "DNSDomain"
-                            },
-                            "."
-                        ]
-                    ]
-                },
-                "RecordSets": [
-                    {
-                        "Name": {
-                            "Fn::Join": [
-                                "",
-                                [
-                                    "\\052.",
                                     {
                                         "Ref": "DNSDomain"
                                     },
@@ -655,7 +615,7 @@
                             "Fn::Join": [
                                 "",
                                 [
-                                    "mail._domainkey.",
+                                    "_domainkey.",
                                     {
                                         "Ref": "DNSDomain"
                                     },
@@ -754,6 +714,7 @@
                             "dkim",
                             "hostname",
                             "welcome_message",
+                            "ubuntu",
                             "reboot"
                         ],
                         "config": [
@@ -770,6 +731,9 @@
                             "roundcube",
                             "dkim",
                             "hostname",
+                            "ubuntu"
+                        ],
+                        "restore_backup": [
                             "restore_backup"
                         ]
                     },
@@ -1103,7 +1067,7 @@
                                         "",
                                         [
                                             "# This file is managed by CloudFormation\n",
-                                            "# Any manual changes wil be lost.\n",
+                                            "# Any manual changes will be lost.\n",
                                             "smtpd_banner = $myhostname ESMTP $mail_name\n",
                                             "biff = no\n",
                                             "append_dot_mydomain = no\n",
@@ -1121,7 +1085,11 @@
                                             "smtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination\n",
                                             "alias_maps = hash:/etc/aliases\n",
                                             "alias_database = hash:/etc/aliases\n",
-                                            "myorigin = /etc/mailname\n",
+                                            "myorigin = ",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "\n",
                                             "mydestination =\n",
                                             "relayhost = \n",
                                             "mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\n",
@@ -1161,6 +1129,10 @@
                                             "milter_default_action = accept\n",
                                             "smtpd_milters = inet:localhost:12301\n",
                                             "non_smtpd_milters = inet:localhost:12301\n",
+                                            "masquerade_domains = mail.",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
                                             "\n"
                                         ]
                                     ]
@@ -1387,6 +1359,27 @@
                                             },
                                             "\n",
                                             "sql_select: select crypt from users where id='%u@%r' and enabled = 1\n",
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/postfix/generic": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "root@mail.",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
+                                            "    no-reply@",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            },
                                             "\n"
                                         ]
                                     ]
@@ -2461,6 +2454,17 @@
                                             }
                                         ]
                                     ]
+                                },
+                                "test": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "test -e /etc/opendkim/keys/",
+                                            {
+                                                "Ref": "DNSDomain"
+                                            }
+                                        ]
+                                    ]
                                 }
                             },
                             "03_chown_opendkim": {
@@ -2611,21 +2615,14 @@
                                     "Fn::Join": [
                                         "",
                                         [
-                                            "TIME=`date +%s`\n",
                                             "touch /etc/welcome_message\n",
                                             "cat << EOF > /etc/welcome_message\n",
                                             "Hello,\n",
                                             "\n",
-                                            "You sent this email at ${TIME}s, when you created this.\n",
-                                            "\n",
-                                            "It's good to see you again.\n",
-                                            "\n",
-                                            "Hugs,\n",
-                                            "\n",
-                                            "Yourformerself\n",
+                                            "Welcome to your email inbox..\n",
                                             "\n",
                                             "EOF\n",
-                                            "cat /etc/welcome_message | mail -s \"Hello again\" ",
+                                            "cat /etc/welcome_message | mail -s \"Welcome!\" ",
                                             {
                                                 "Ref": "Name"
                                             },
@@ -2638,6 +2635,51 @@
                                     ]
                                 },
                                 "test": "! test -e /etc/welcome_message"
+                            }
+                        }
+                    },
+                    "ubuntu": {
+                        "packages": {
+                            "apt": {
+                                "figlet": []
+                            }
+                        },
+                        "files": {
+                            "/etc/update-motd.d/00-header": {
+                              "content": {
+                                  "Fn::Join": [
+                                      "",
+                                      [
+                                          "#!/bin/sh\n",
+                                          "# This file is managed by CloudFormation\n",
+                                          "figlet email\n",
+                                          "\n",
+                                          "[ -r /etc/lsb-release ] && . /etc/lsb-release\n",
+                                          "if [ -z \"$DISTRIB_DESCRIPTION\" ] && [ -x /usr/bin/lsb_release ]; then\n",
+                                          "  # Fall back to using the very slow lsb_release utility\n",
+                                          "  DISTRIB_DESCRIPTION=$(lsb_release -s -d)\n",
+                                          "fi\n",
+                                          "printf \"Welcome to %s (%s %s %s)\\n\" \"$DISTRIB_DESCRIPTION\" \"$(uname -o)\" \"$(uname -r)\" \"$(uname -m)\"\n"
+                                      ]
+                                  ]
+                                },
+                                "mode": "000755",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/profile.d/force_color_prompt.sh": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "# This file is managed by CloudFormation\n",
+                                            "force_color_prompt=yes\n"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000755",
+                                "owner": "root",
+                                "group": "root"
                             }
                         }
                     }
